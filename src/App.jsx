@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 
 /* ============================================================
-   ピックルイキタイ MVP v7 — ワンページ版
+   ピックルイキタイ MVP v8 — ワンページ版（コート写真つき）
    ヒーロー → とは？ → 空き枠 → コート一覧 → イベント → コート登録
    ナビはアンカースクロール。全部1ページで完結。レスポンシブ。
    ============================================================ */
@@ -164,6 +164,83 @@ const CourtPattern = () => (
     </g>
   </svg>
 );
+
+/* ------------------------------------------------------------
+   コート写真: カテゴリ別の実写を割り当て、読み込み失敗時は
+   ブランド調のSVG「雰囲気イラスト」に自動フォールバック。
+   → どのコートも必ず1枚は絵が出る。
+   ------------------------------------------------------------ */
+const uns = (id, w = 800) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`;
+const PHOTO_POOL = {
+  pickle: ["1626224583764-f87db24ac4ea", "1595435742656-5272d0b3fa82"],
+  outdoor: ["1622163642998-1ea32b0bbc67", "1587280501635-68a0e82cd5ff"],
+  tennis: ["1554068865-24cecd4e34b8", "1587280501635-68a0e82cd5ff"],
+  gym: ["1519861531473-9200262188bf", "1613918431703-aa50889e3be9"],
+};
+const hashStr = (s = "") => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+};
+function photoFor(fac, w = 800) {
+  if (fac.photo) return fac.photo;
+  let pool;
+  if (fac.cat === "public") pool = PHOTO_POOL.gym;
+  else if (fac.cat === "conv") pool = PHOTO_POOL.tennis;
+  else if (fac.cat === "trip") pool = PHOTO_POOL.outdoor;
+  else pool = fac.indoor ? PHOTO_POOL.pickle : PHOTO_POOL.outdoor;
+  return uns(pool[hashStr(fac.id) % pool.length], w);
+}
+
+const CourtScene = ({ indoor, style }) => (
+  <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" style={style} aria-hidden>
+    <defs>
+      <linearGradient id="courtSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor={indoor ? "#12666E" : "#1E86AE"} />
+        <stop offset="1" stopColor={indoor ? "#0A3E44" : "#0C4A4E"} />
+      </linearGradient>
+    </defs>
+    <rect width="400" height="240" fill="url(#courtSky)" />
+    <g stroke={T.ball} strokeWidth="2.5" fill="none" opacity="0.9" transform="translate(0,18)">
+      <polygon points="66,182 334,182 302,58 98,58" />
+      <line x1="82" y1="120" x2="318" y2="120" />
+      <line x1="200" y1="58" x2="200" y2="182" />
+    </g>
+    <line x1="112" y1="96" x2="288" y2="96" stroke="#fff" strokeWidth="2" opacity="0.65" strokeDasharray="5 5" />
+    <g transform="translate(298,62)">
+      <circle r="13" fill={T.ball} stroke={T.ballInk} strokeWidth="1.5" />
+      <circle cx="-4" cy="-4" r="1.6" fill={T.ballInk} />
+      <circle cx="4" cy="-4" r="1.6" fill={T.ballInk} />
+      <circle cx="0" cy="4" r="1.6" fill={T.ballInk} />
+    </g>
+  </svg>
+);
+
+const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
+  const [err, setErr] = useState(false);
+  return (
+    <div style={{ position: "relative", width: "100%", height, borderRadius: rounded, overflow: "hidden", background: "#0A3E44" }}>
+      <CourtScene indoor={fac.indoor} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+      {!err && (
+        <img
+          src={photoFor(fac)}
+          alt={fac.name}
+          loading="lazy"
+          onError={() => setErr(true)}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      )}
+      <div style={{ position: "absolute", top: 6, right: 6, fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.82)", background: "rgba(8,28,30,0.42)", padding: "2px 6px", borderRadius: 6, letterSpacing: "0.04em" }}>イメージ</div>
+      {showBadge && (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "24px 12px 9px", background: "linear-gradient(transparent, rgba(8,36,38,0.82))" }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
+            {fac.indoor ? "🏠 屋内" : "☀️ 屋外"} ・ {fac.area}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function PickleIkitai() {
   const [winStart, setWinStart] = useState(0);
@@ -509,6 +586,9 @@ export default function PickleIkitai() {
           <div className="cardGrid">
             {listFacs.map((f) => (
               <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => setDetail(f)}>
+                <div style={{ marginBottom: 10 }}>
+                  <CourtImage fac={f} height={118} rounded={11} />
+                </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <CatBadge cat={f.cat} />
@@ -657,7 +737,8 @@ export default function PickleIkitai() {
           <div style={S.sheetBack} onClick={() => setDetail(null)} />
           <div style={S.sheet}>
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <CourtImage fac={detail} height={190} rounded={16} showBadge />
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
               <CatBadge cat={detail.cat} />
               {detail.userSubmitted && <UserBadge />}
               {detail.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
