@@ -412,6 +412,23 @@ const VenueTag = ({ indoor, size = 13, color = "currentColor" }) => (
   </span>
 );
 
+/* コート位置の地図（Googleマップ埋め込み・APIキー不要）＋経路リンク */
+const CourtMap = ({ fac }) => {
+  const src = `https://maps.google.com/maps?q=${fac.lat},${fac.lng}&z=15&output=embed`;
+  const dir = `https://www.google.com/maps/dir/?api=1&destination=${fac.lat},${fac.lng}`;
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1.5px solid ${T.line}` }}>
+        <iframe title={`${fac.name}の地図`} src={src} loading="lazy" style={{ width: "100%", height: 170, border: "none", display: "block" }} />
+      </div>
+      <a href={dir} target="_blank" rel="noopener noreferrer"
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8, padding: "11px 0", borderRadius: 12, background: "#EFF2EF", color: T.ink, fontWeight: 800, fontSize: 13, textDecoration: "none" }}>
+        🧭 ここへの経路を見る（Googleマップ）
+      </a>
+    </div>
+  );
+};
+
 const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
   const [err, setErr] = useState(false);
   return (
@@ -1613,6 +1630,10 @@ export default function PickleIkitai() {
             <button style={{ ...S.btn(false), marginTop: 12 }} onClick={() => outbound(detail)}>
               {detail.live ? "公式サイトを開く →" : "公式情報を見る →"}
             </button>
+
+            {/* アクセス（地図） */}
+            <div style={{ marginTop: 20, fontSize: 12, fontWeight: 900, letterSpacing: "0.06em", color: "#5E716C" }}>アクセス</div>
+            <CourtMap fac={detail} />
 
             {/* ピク活 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 20 }}>
