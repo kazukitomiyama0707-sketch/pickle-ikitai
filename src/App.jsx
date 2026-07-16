@@ -464,6 +464,11 @@ export default function PickleIkitai() {
   const [areaFilter, setAreaFilter] = useState("all");
   const [catFilter, setCatFilter] = useState("all");
   const [sortKey, setSortKey] = useState("dist");
+  // イキタイ（行きたい保存）— サービス名そのものの核機能
+  const [ikitai, setIkitai] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("pk_ikitai") || "[]")); } catch { return new Set(); }
+  });
+  const [onlyIkitai, setOnlyIkitai] = useState(false);
   const [sheet, setSheet] = useState(null);
   const [detail, setDetail] = useState(null);
   const [toast, setToast] = useState(null);
@@ -544,10 +549,13 @@ export default function PickleIkitai() {
   }, [areaFilter, userFacs, dayIdx]);
 
   const listFacs = useMemo(() => {
-    let arr = ALL_FACS.filter((f) => catFilter === "all" || f.cat === catFilter).map((f) => ({ ...f, km: dist(origin, f) }));
+    let arr = ALL_FACS
+      .filter((f) => catFilter === "all" || f.cat === catFilter)
+      .filter((f) => !onlyIkitai || ikitai.has(f.id))
+      .map((f) => ({ ...f, km: dist(origin, f) }));
     arr.sort((a, b) => (sortKey === "price" ? minCourtPrice(a) - minCourtPrice(b) : a.km - b.km));
     return arr;
-  }, [catFilter, sortKey, userFacs, origin]);
+  }, [catFilter, sortKey, userFacs, origin, onlyIkitai, ikitai]);
 
   // イベント/レッスンは全施設のplansから自動集計
   const eventPlans = useMemo(() => {
@@ -596,6 +604,18 @@ export default function PickleIkitai() {
     reader.onerror = () => showToast("画像を読み込めませんでした");
     reader.readAsDataURL(file);
   };
+
+  const toggleIkitai = (fac, e) => {
+    e && e.stopPropagation();
+    setIkitai((prev) => {
+      const next = new Set(prev);
+      if (next.has(fac.id)) { next.delete(fac.id); showToast("イキタイから外しました"); }
+      else { next.add(fac.id); showToast(`「${fac.name}」をイキタイに追加⚡`); }
+      localStorage.setItem("pk_ikitai", JSON.stringify([...next]));
+      return next;
+    });
+  };
+  const ikitaiCount = ikitai.size;
 
   const doAuth = () => {
     const n = sanitizeText(authName).trim().slice(0, 20);
@@ -769,6 +789,35 @@ export default function PickleIkitai() {
     </div>
   );
 
+  // イキタイ保存ボタン（サービス名の核。カード上に浮かせる）
+  const IkitaiBtn = ({ fac, floating = false }) => {
+    const on = ikitai.has(fac.id);
+    const base = floating
+      ? { position: "absolute", top: 8, left: 8, zIndex: 3, padding: "5px 11px 5px 8px" }
+      : { padding: "8px 14px 8px 11px" };
+    return (
+      <button
+        onClick={(e) => toggleIkitai(fac, e)}
+        aria-pressed={on}
+        title={on ? "イキタイ済み" : "イキタイに追加"}
+        style={{
+          ...base,
+          display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer",
+          border: on ? "none" : `1.5px solid ${floating ? "rgba(255,255,255,0.9)" : T.line}`,
+          borderRadius: 999, fontFamily: FONT, fontWeight: 900, fontSize: 12, whiteSpace: "nowrap",
+          background: on ? T.ball : floating ? "rgba(8,28,30,0.55)" : "#fff",
+          color: on ? T.ballInk : floating ? "#fff" : T.ink,
+          boxShadow: on ? "0 2px 8px rgba(215,244,56,0.5)" : "none",
+          backdropFilter: floating && !on ? "blur(2px)" : "none",
+          transition: "transform 0.12s ease",
+        }}
+      >
+        <span style={{ fontSize: 13, transform: on ? "scale(1.15)" : "none", transition: "transform 0.12s ease" }}>{on ? "⚡" : "＋"}</span>
+        {on ? "イキタイ済み" : "イキタイ"}
+      </button>
+    );
+  };
+
   return (
     <div style={{ fontFamily: FONT, color: T.ink, background: T.bg }}>
       <style>{`
@@ -901,8 +950,9 @@ export default function PickleIkitai() {
               <div className="cardGrid">
                 {searchFacs.map((f) => (
                   <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => openDetail(f)}>
-                    <div style={{ marginBottom: 10 }}>
+                    <div style={{ marginBottom: 10, position: "relative" }}>
                       <CourtImage fac={f} height={118} rounded={11} />
+                      <IkitaiBtn fac={f} floating />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
@@ -1038,11 +1088,29 @@ export default function PickleIkitai() {
               : "「近い順」をタップすると現在地から並べ替えます"}
           </div>
 
+          {ikitaiCount > 0 && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+              <button
+                onClick={() => setOnlyIkitai((v) => !v)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 999, cursor: "pointer", fontFamily: FONT, fontWeight: 900, fontSize: 13, border: onlyIkitai ? "none" : `1.5px solid ${T.line}`, background: onlyIkitai ? T.ball : "#fff", color: onlyIkitai ? T.ballInk : T.ink }}>
+                ⚡ イキタイ済み {ikitaiCount}
+              </button>
+            </div>
+          )}
+
+          {onlyIkitai && listFacs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "36px 0" }}>
+              <BallGuy mood="oops" />
+              <p style={{ fontSize: 14, fontWeight: 800, marginTop: 12 }}>このカテゴリのイキタイはまだありません</p>
+              <button style={{ ...S.btn(false), maxWidth: 240, margin: "12px auto 0" }} onClick={() => setOnlyIkitai(false)}>すべてのコートを見る</button>
+            </div>
+          ) : (
           <div className="cardGrid">
             {listFacs.map((f) => (
               <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => openDetail(f)}>
-                <div style={{ marginBottom: 10 }}>
+                <div style={{ marginBottom: 10, position: "relative" }}>
                   <CourtImage fac={f} height={118} rounded={11} />
+                  <IkitaiBtn fac={f} floating />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
@@ -1066,6 +1134,7 @@ export default function PickleIkitai() {
               </button>
             ))}
           </div>
+          )}
           <div style={{ fontSize: 11, color: "#AEBCB7", textAlign: "center", marginTop: 16 }}>
             距離は{geoState === "granted" ? "現在地" : "池尻大橋"}起点の直線距離 ・ 現在 {ALL_FACS.length} コート掲載中
           </div>
@@ -1485,7 +1554,10 @@ export default function PickleIkitai() {
           <div style={S.sheetBack} onClick={() => setDetail(null)} />
           <div style={S.sheet}>
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
-            <CourtImage fac={detail} height={190} rounded={16} showBadge />
+            <div style={{ position: "relative" }}>
+              <CourtImage fac={detail} height={190} rounded={16} showBadge />
+              <IkitaiBtn fac={detail} floating />
+            </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
               <CatBadge cat={detail.cat} />
               {detail.userSubmitted && <UserBadge />}
