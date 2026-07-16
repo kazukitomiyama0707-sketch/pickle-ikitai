@@ -401,7 +401,7 @@ const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
 };
 
 const OPERATOR = "MUFASA Technology";
-const CONTACT_EMAIL = "contact@pickleikitai.com";
+const CONTACT_EMAIL = "pickleikitai@gmail.com";
 const TERMS = [
   ["第1条（サービス内容）", "「ピックルイキタイ」（以下、本サービス）は、東京および関東圏のピックルボールコート・イベント情報を横断的に紹介する情報ポータルです。コートの予約・利用契約は利用者と各施設との間で直接成立し、本サービスはその当事者となりません。"],
   ["第2条（情報の正確性）", "本サービスは掲載情報の正確性・完全性・最新性を保証しません。料金・空き状況・ピックルボール利用の可否等は、必ず各施設の公式情報をご確認ください。空き枠表示は参考情報であり、実際の予約可否を保証するものではありません。"],
@@ -431,6 +431,7 @@ export default function PickleIkitai() {
   const [clicks, setClicks] = useState(0);
   const [userFacs, setUserFacs] = useState([]);
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [form, setForm] = useState({ name: "", area: "港区", cat: "public", indoor: "indoor", price: "", note: "", url: "" });
   const [pikkatsu, setPikkatsu] = useState(SEED_PIKKATSU);
   const [pikForm, setPikForm] = useState(null);
@@ -450,6 +451,7 @@ export default function PickleIkitai() {
   const refPik = useRef(null);
   const refAdd = useRef(null);
   const refContact = useRef(null);
+  const refSearch = useRef(null);
   const scrollTo = (r) => r.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const ALL_FACS = useMemo(() => [...SEED_FACILITIES, ...userFacs], [userFacs]);
@@ -561,11 +563,26 @@ export default function PickleIkitai() {
     showToast("ナイスピク活⚡");
   };
 
+  // コート名・エリア・メモ・プラン名を横断検索（部分一致・大文字小文字/全角半角を無視）
+  const normalize = (s = "") =>
+    String(s).toLowerCase().replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/\s+/g, "");
+  const searchFacs = useMemo(() => {
+    const q = normalize(submittedQuery);
+    if (!q) return [];
+    return ALL_FACS.filter((f) => {
+      const hay = normalize([f.name, f.area, f.note, f.rating, ...(f.plans || []).map((p) => p.name)].join(" "));
+      return hay.includes(q);
+    }).map((f) => ({ ...f, km: dist(HOME, f) })).sort((a, b) => a.km - b.km);
+  }, [submittedQuery, userFacs]);
+
   const doSearch = () => {
     const q = query.trim();
-    const matchedArea = Object.keys(AREA_COORDS).find((a) => q && a.includes(q.replace(/区|県/g, "")) && q.length >= 2);
+    setSubmittedQuery(q);
+    if (!q) { scrollTo(refSlots); return; }
+    // 区名に完全マッチするなら空き枠のエリアフィルタも連動させる
+    const matchedArea = Object.keys(AREA_COORDS).find((a) => normalize(a) === normalize(q) || normalize(a) === normalize(q) + "区");
     if (matchedArea && areas.includes(matchedArea)) setAreaFilter(matchedArea);
-    scrollTo(refSlots);
+    setTimeout(() => scrollTo(refSearch), 60);
   };
 
   const submitCourt = () => {
@@ -733,6 +750,61 @@ export default function PickleIkitai() {
           <div className="hideMobile" style={{ fontSize: 11, color: "#8B9B96", fontWeight: 700, flexShrink: 0 }}>by MUFASA Technology</div>
         </div>
       </div>
+
+      {/* ==================== 検索結果 ==================== */}
+      {submittedQuery && (
+        <section ref={refSearch} className="section" style={{ background: T.bg, paddingTop: "clamp(40px, 6vh, 64px)" }}>
+          <div className="sectionInner">
+            <SectionHead kicker="SEARCH" title={`「${submittedQuery}」の検索結果`} />
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: T.court }}>{searchFacs.length}件</span>
+              <button onClick={() => { setSubmittedQuery(""); setQuery(""); }} style={{ marginLeft: 12, border: "none", background: "none", color: "#8B9B96", fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>クリア</button>
+            </div>
+
+            {searchFacs.length === 0 ? (
+              <div style={{ textAlign: "center", marginTop: 22 }}>
+                <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                  <BallGuy mood="oops" />
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 800, marginTop: 12 }}>見つかりませんでした</p>
+                <p style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.9 }}>
+                  コート名・エリア・キーワードで探せます（例: 有明 / 渋谷 / 屋外 / 体験会）<br />
+                  ここでプレーできた場所を知っていたら、ぜひ教えてください。
+                </p>
+                <button style={{ ...S.btn(true), maxWidth: 280, margin: "14px auto 0" }} onClick={() => scrollTo(refAdd)}>コートを登録する →</button>
+              </div>
+            ) : (
+              <div className="cardGrid">
+                {searchFacs.map((f) => (
+                  <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => openDetail(f)}>
+                    <div style={{ marginBottom: 10 }}>
+                      <CourtImage fac={f} height={118} rounded={11} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                        <CatBadge cat={f.cat} />
+                        {f.userSubmitted && <UserBadge />}
+                        {!hasCourt(f) && <span style={{ fontSize: 10, fontWeight: 800, color: "#8A4B2D", background: "#F9EBE2", borderRadius: 6, padding: "2px 6px" }}>体験会のみ</span>}
+                        {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>開業前</span>}
+                        {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
+                        {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#8B9B96", flexShrink: 0 }}>{f.km.toFixed(1)}km</div>
+                    </div>
+                    <div style={{ fontWeight: 900, fontSize: 15, marginTop: 6 }}>{f.name}</div>
+                    <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
+                      {f.area} ・ {f.indoor ? "屋内" : "屋外"} ・ {hasCourt(f)
+                        ? <span style={{ fontWeight: 800, color: T.court }}>{cardPrice(f)}</span>
+                        : <span style={{ fontWeight: 800, color: "#8A4B2D" }}>体験会のみ</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 3 }}>{f.note}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ==================== とは？ ==================== */}
       <section ref={refAbout} className="section" style={{ background: "#fff" }}>
