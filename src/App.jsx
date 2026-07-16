@@ -273,6 +273,7 @@ const PikCard = ({ k, onLike, facName, onFac }) => {
         {k.courtCondition ? <span>📝 {k.courtCondition}</span> : null}
       </div>
       {k.comment ? <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{k.comment}</div> : null}
+      {k.photo ? <img src={k.photo} alt="" loading="lazy" style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 10, marginTop: 8, display: "block" }} /> : null}
       <button onClick={onLike} style={{ marginTop: 8, padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ballInk }}>⚡ {k.likes}</button>
     </div>
   );
@@ -374,6 +375,43 @@ const CourtScene = ({ indoor, style }) => (
   </svg>
 );
 
+/* 屋内 / 屋外 マーク（ブランド調SVG） */
+const IndoorMark = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden style={{ display: "inline-block", verticalAlign: "-2px", flexShrink: 0 }}>
+    {/* 屋根 */}
+    <path d="M2.5 8.6 L10 2.6 L17.5 8.6" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    {/* 建物と床のコートライン */}
+    <path d="M4.4 9.6 V16.4 H15.6 V9.6" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    <line x1="4.4" y1="13.4" x2="15.6" y2="13.4" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+    <line x1="10" y1="9.6" x2="10" y2="16.4" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+const OutdoorMark = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden style={{ display: "inline-block", verticalAlign: "-2px", flexShrink: 0 }}>
+    {/* 太陽 */}
+    <circle cx="10" cy="6.1" r="3.1" fill="none" stroke={color} strokeWidth="1.8" />
+    <g stroke={color} strokeWidth="1.5" strokeLinecap="round">
+      <line x1="10" y1="0.9" x2="10" y2="2" />
+      <line x1="4.5" y1="6.1" x2="3.4" y2="6.1" />
+      <line x1="16.6" y1="6.1" x2="15.5" y2="6.1" />
+      <line x1="6.1" y1="2.2" x2="5.3" y2="1.4" />
+      <line x1="13.9" y1="2.2" x2="14.7" y2="1.4" />
+    </g>
+    {/* コート（遠近） */}
+    <path d="M6.2 12.2 H13.8 L16.6 17.6 H3.4 Z" fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+    <line x1="4.9" y1="14.9" x2="15.1" y2="14.9" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+    <line x1="10" y1="12.2" x2="10" y2="17.6" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+);
+const VenueMark = ({ indoor, size = 14, color = "currentColor" }) => (indoor ? <IndoorMark size={size} color={color} /> : <OutdoorMark size={size} color={color} />);
+/* 「屋内 / 屋外」テキスト + マーク */
+const VenueTag = ({ indoor, size = 13, color = "currentColor" }) => (
+  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color }}>
+    <VenueMark indoor={indoor} size={size} color={color} />
+    {indoor ? "屋内" : "屋外"}
+  </span>
+);
+
 const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
   const [err, setErr] = useState(false);
   return (
@@ -392,7 +430,7 @@ const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
       {showBadge && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "24px 12px 9px", background: "linear-gradient(transparent, rgba(8,36,38,0.82))" }}>
           <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
-            {fac.indoor ? "🏠 屋内" : "☀️ 屋外"} ・ {fac.area}
+            <VenueTag indoor={fac.indoor} size={13} color="#fff" /> ・ {fac.area}
           </span>
         </div>
       )}
@@ -402,6 +440,7 @@ const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
 
 const OPERATOR = "MUFASA Technology";
 const CONTACT_EMAIL = "pickleikitai@gmail.com";
+const LINE_URL = "https://lin.ee/OWBC5Kw"; // 公式LINE（伸びしろ報告の送信先）
 const TERMS = [
   ["第1条（サービス内容）", "「ピックルイキタイ」（以下、本サービス）は、東京および関東圏のピックルボールコート・イベント情報を横断的に紹介する情報ポータルです。コートの予約・利用契約は利用者と各施設との間で直接成立し、本サービスはその当事者となりません。"],
   ["第2条（情報の正確性）", "本サービスは掲載情報の正確性・完全性・最新性を保証しません。料金・空き状況・ピックルボール利用の可否等は、必ず各施設の公式情報をご確認ください。空き枠表示は参考情報であり、実際の予約可否を保証するものではありません。"],
@@ -437,6 +476,12 @@ export default function PickleIkitai() {
   const [pikForm, setPikForm] = useState(null);
   const [detailPikLimit, setDetailPikLimit] = useState(3);
   const [legalView, setLegalView] = useState(null);
+  // 認証: 現状はブラウザ内の暫定アカウント。LINEログイン(OAuth)+D1が通ったら差し替える
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pk_user") || "null"); } catch { return null; }
+  });
+  const [authView, setAuthView] = useState(null);
+  const [authName, setAuthName] = useState("");
   const [contact, setContact] = useState({ name: "", email: "", message: "", sent: false });
   const timers = useRef([]);
   const idRef = useRef(1);
@@ -525,7 +570,45 @@ export default function PickleIkitai() {
   const facById = (id) => ALL_FACS.find((f) => f.id === id);
   const openDetail = (f) => { setDetail(f); setDetailPikLimit(3); };
   const likePik = (id) => setPikkatsu((list) => list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)));
-  const openPikForm = (fac) => setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: "", courtCondition: "" });
+  // 写真は端末内で長辺1000pxに圧縮してdataURL化（本実装ではCloudflare R2にアップロードする）
+  const pickPhoto = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("画像ファイルを選んでください"); return; }
+    if (file.size > 12 * 1024 * 1024) { showToast("画像が大きすぎます（12MBまで）"); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1000;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * scale);
+        cv.height = Math.round(img.height * scale);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        setPikForm((f) => (f ? { ...f, photo: cv.toDataURL("image/jpeg", 0.82) } : f));
+      };
+      img.onerror = () => showToast("画像を読み込めませんでした");
+      img.src = reader.result;
+    };
+    reader.onerror = () => showToast("画像を読み込めませんでした");
+    reader.readAsDataURL(file);
+  };
+
+  const doAuth = () => {
+    const n = sanitizeText(authName).trim().slice(0, 20);
+    if (!n) { showToast("ニックネームを入力してください"); return; }
+    const u = { name: n, since: todayISO() };
+    localStorage.setItem("pk_user", JSON.stringify(u));
+    setUser(u);
+    setAuthView(null);
+    setAuthName("");
+    showToast(`ようこそ、${n}さん⚡`);
+  };
+  // ピク活投稿はログイン必須
+  const openPikForm = (fac) => {
+    if (!user) { setAuthView("login"); showToast("ピク活の投稿にはログインが必要です"); return; }
+    setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: user.name, courtCondition: "", photo: "" });
+  };
   const timeline = useMemo(() => [...pikkatsu].sort(pikSort).slice(0, 10), [pikkatsu]);
   const submitContact = (e) => {
     e.preventDefault();
@@ -555,6 +638,7 @@ export default function PickleIkitai() {
       courtCondition: sanitizeText(pf.courtCondition),
       comment,
       nickname: sanitizeText(pf.nickname).slice(0, 20),
+      photo: pf.photo || "",
       likes: 0,
     };
     postCount.current[pf.facilityId] = used + 1;
@@ -691,14 +775,30 @@ export default function PickleIkitai() {
       {/* ==================== ナビ（sticky） ==================== */}
       <div className="lpNav stickyNav" style={{ background: T.hero1, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px clamp(14px, 4vw, 40px)", gap: 10 }}>
         <div className="lpNavLinks" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
-          <a onClick={() => scrollTo(refAbout)}>とは？</a>
+          <a onClick={() => scrollTo(refAbout)}>ピックルイキタイとは</a>
           <a onClick={() => scrollTo(refSlots)}>空き枠</a>
           <a onClick={() => scrollTo(refList)}>コート一覧</a>
           <a onClick={() => scrollTo(refEvents)}>イベント</a>
           <a onClick={() => scrollTo(refPik)}>ピク活</a>
           <a onClick={() => scrollTo(refAdd)}>コート登録</a>
         </div>
-        <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", opacity: 0.85, border: "1.5px solid rgba(255,255,255,0.6)", borderRadius: 999, padding: "3px 11px", flexShrink: 0 }}>β版</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <button onClick={() => window.open(LINE_URL, "_blank")} className="hideMobile" style={{ display: "flex", alignItems: "center", gap: 5, border: "none", borderRadius: 999, padding: "5px 12px", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>
+            🌱 伸びしろ報告
+          </button>
+          {user ? (
+            <button onClick={() => setAuthView("account")} style={{ display: "flex", alignItems: "center", gap: 6, border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 999, padding: "4px 11px 4px 5px", background: "transparent", cursor: "pointer", fontFamily: FONT }}>
+              <span style={{ width: 20, height: 20, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 11, display: "grid", placeItems: "center" }}>{user.name.slice(0, 1)}</span>
+              <span style={{ color: "#fff", fontWeight: 800, fontSize: 11, whiteSpace: "nowrap" }}>{user.name}</span>
+            </button>
+          ) : (
+            <>
+              <button onClick={() => setAuthView("login")} style={{ border: "1.5px solid rgba(255,255,255,0.6)", borderRadius: 999, padding: "5px 12px", background: "transparent", color: "#fff", fontWeight: 800, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>ログイン</button>
+              <button onClick={() => setAuthView("signup")} style={{ border: "none", borderRadius: 999, padding: "6px 13px", background: "#fff", color: T.hero1, fontWeight: 900, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>新規登録</button>
+            </>
+          )}
+          <span className="hideMobile" style={{ fontSize: 11, fontWeight: 800, color: "#fff", opacity: 0.85, border: "1.5px solid rgba(255,255,255,0.6)", borderRadius: 999, padding: "3px 11px" }}>β版</span>
+        </div>
       </div>
 
       {/* ==================== HERO ==================== */}
@@ -793,7 +893,7 @@ export default function PickleIkitai() {
                     </div>
                     <div style={{ fontWeight: 900, fontSize: 15, marginTop: 6 }}>{f.name}</div>
                     <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
-                      {f.area} ・ {f.indoor ? "屋内" : "屋外"} ・ {hasCourt(f)
+                      {f.area} ・ <VenueTag indoor={f.indoor} size={12} /> ・ {hasCourt(f)
                         ? <span style={{ fontWeight: 800, color: T.court }}>{cardPrice(f)}</span>
                         : <span style={{ fontWeight: 800, color: "#8A4B2D" }}>体験会のみ</span>}
                     </div>
@@ -925,7 +1025,7 @@ export default function PickleIkitai() {
                 </div>
                 <div style={{ fontWeight: 900, fontSize: 15, marginTop: 6 }}>{f.name}</div>
                 <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
-                  {f.area} ・ {f.indoor ? "屋内" : "屋外"} ・ {hasCourt(f)
+                  {f.area} ・ <VenueTag indoor={f.indoor} size={12} /> ・ {hasCourt(f)
                     ? <span style={{ fontWeight: 800, color: T.court }}>{cardPrice(f)}</span>
                     : <span style={{ fontWeight: 800, color: "#8A4B2D" }}>体験会のみ</span>}
                 </div>
@@ -1097,6 +1197,18 @@ export default function PickleIkitai() {
             <BallGuy size={34} mood="happy" />
             <BallGuy size={34} flip mood="oops" />
           </div>
+          {/* 伸びしろ報告（バグ報告のポジティブ版） */}
+          <div style={{ maxWidth: 420, margin: "26px auto 0", background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(255,255,255,0.18)", borderRadius: 16, padding: "18px 18px 20px" }}>
+            <div style={{ fontWeight: 900, fontSize: 15 }}>🌱 伸びしろ報告</div>
+            <div style={{ fontSize: 12, opacity: 0.82, marginTop: 7, lineHeight: 1.9 }}>
+              「ここ使いにくい」「この情報が古い」「こんなコートもあるよ」——<br />
+              全部が伸びしろです。公式LINEで気軽に送ってください。
+            </div>
+            <button onClick={() => window.open(LINE_URL, "_blank")} style={{ width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 12, border: "none", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT }}>
+              LINEで伸びしろを報告する →
+            </button>
+          </div>
+
           <div style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", marginTop: 22 }}>
             <button style={S.footLink} onClick={() => setLegalView("terms")}>利用規約</button>
             <button style={S.footLink} onClick={() => setLegalView("privacy")}>プライバシーポリシー</button>
@@ -1143,7 +1255,7 @@ export default function PickleIkitai() {
                     {f.userSubmitted && <UserBadge />}
                     <div style={{ fontWeight: 900, fontSize: 15 }}>{f.name}</div>
                   </div>
-                  <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 2 }}>{f.area} ・ {f.indoor ? "屋内" : "屋外"}</div>
+                  <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 2 }}>{f.area} ・ <VenueTag indoor={f.indoor} size={12} /></div>
                   {shown.map(({ p, st }) => {
                     const k = KIND[p.kind];
                     return (
@@ -1163,6 +1275,72 @@ export default function PickleIkitai() {
                   })}
                 </div>
               ))}
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: ログイン / 新規登録 / アカウント ==================== */}
+      {authView && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 100 }} onClick={() => { setAuthView(null); setAuthName(""); }} />
+          <div style={{ ...S.sheet, zIndex: 110, maxWidth: 420 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 16px" }} />
+
+            {authView === "account" ? (
+              <div style={{ textAlign: "center", paddingBottom: 6 }}>
+                <div style={{ width: 62, height: 62, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 26, display: "grid", placeItems: "center", margin: "0 auto" }}>{user?.name.slice(0, 1)}</div>
+                <div style={{ fontWeight: 900, fontSize: 18, marginTop: 10 }}>{user?.name}</div>
+                <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 4 }}>
+                  ⚡ ピク活 {pikkatsu.filter((p) => p.nickname === user?.name).length}件
+                </div>
+                <button style={{ ...S.btn(false), marginTop: 18 }} onClick={() => { localStorage.removeItem("pk_user"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
+                <button style={S.btn(false)} onClick={() => setAuthView(null)}>閉じる</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ transform: "scale(0.62)", transformOrigin: "center", marginBottom: -18, marginTop: -10 }}>
+                  <div style={{ background: T.hero1, borderRadius: 20, padding: "18px 0 22px" }}><Logo /></div>
+                </div>
+
+                <div style={{ display: "flex", background: "#F1F4F0", borderRadius: 12, padding: 4, marginTop: 8 }}>
+                  {[["login", "ログイン"], ["signup", "新規登録"]].map(([k, label]) => (
+                    <button key={k} onClick={() => setAuthView(k)} style={{ flex: 1, padding: "10px 0", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: FONT, fontWeight: 900, fontSize: 13, background: authView === k ? T.ink : "transparent", color: authView === k ? "#fff" : "#8B9B96" }}>{label}</button>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 12, fontWeight: 900, color: "#5E716C", marginTop: 20 }}>SNSアカウントで{authView === "login" ? "ログイン" : "登録"}</div>
+                <button
+                  onClick={() => showToast("LINEログインは準備中です。もう少しお待ちください🙏")}
+                  style={{ width: "100%", marginTop: 10, padding: "13px 0", borderRadius: 12, border: "none", background: "#06C755", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: 0.55 }}>
+                  <span style={{ background: "#fff", color: "#06C755", borderRadius: 5, padding: "1px 5px", fontSize: 10, fontWeight: 900 }}>LINE</span>
+                  LINEで{authView === "login" ? "ログイン" : "登録"}
+                  <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.9 }}>（準備中）</span>
+                </button>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 4px" }}>
+                  <div style={{ flex: 1, height: 1, background: T.line }} />
+                  <span style={{ fontSize: 11, color: "#AEBCB7", fontWeight: 700 }}>または</span>
+                  <div style={{ flex: 1, height: 1, background: T.line }} />
+                </div>
+
+                <label style={S.label}>ニックネーム</label>
+                <input
+                  style={S.input}
+                  maxLength={20}
+                  placeholder="例: 銀座ドロップ"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && doAuth()}
+                />
+                <button style={{ ...S.btn(true), marginTop: 16 }} onClick={doAuth}>
+                  {authView === "login" ? "ログイン" : "この名前で始める"}
+                </button>
+                <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 10, textAlign: "center", lineHeight: 1.8 }}>
+                  {authView === "signup" && <>登録により<button onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・<button onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします<br /></>}
+                  ※現在はこの端末内に保存される簡易アカウントです
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
@@ -1242,8 +1420,25 @@ export default function PickleIkitai() {
             <textarea style={{ ...S.input, minHeight: 74, resize: "vertical" }} maxLength={140} placeholder="例: 初4人で2h。11時から混み始めた" value={pikForm.comment} onChange={(e) => setPikForm({ ...pikForm, comment: e.target.value })} />
             <div style={{ fontSize: 10, color: "#AEBCB7", textAlign: "right", marginTop: 2 }}>{pikForm.comment.length}/140 ・ 電話番号・URLは投稿できません</div>
 
-            <label style={S.label}>ニックネーム（任意）</label>
-            <input style={S.input} maxLength={20} placeholder={NONAME} value={pikForm.nickname} onChange={(e) => setPikForm({ ...pikForm, nickname: e.target.value })} />
+            <label style={S.label}>写真（任意・1枚）</label>
+            {pikForm.photo ? (
+              <div style={{ position: "relative", marginTop: 6 }}>
+                <img src={pikForm.photo} alt="投稿写真プレビュー" style={{ width: "100%", height: 170, objectFit: "cover", borderRadius: 12, display: "block" }} />
+                <button onClick={() => setPikForm({ ...pikForm, photo: "" })} style={{ position: "absolute", top: 8, right: 8, border: "none", borderRadius: 999, width: 28, height: 28, background: "rgba(8,28,30,0.72)", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer" }}>×</button>
+              </div>
+            ) : (
+              <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 6, padding: "16px 0", borderRadius: 12, border: `1.5px dashed ${T.line}`, background: "#FAFCFA", cursor: "pointer", fontWeight: 800, fontSize: 13, color: "#5E716C" }}>
+                📷 写真を選ぶ
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => pickPhoto(e.target.files?.[0])} />
+              </label>
+            )}
+            <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 4 }}>コートの様子が伝わる写真だと喜ばれます</div>
+
+            <label style={S.label}>投稿者</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, padding: "10px 12px", borderRadius: 10, background: "#F1F4F0" }}>
+              <span style={{ width: 24, height: 24, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 12, display: "grid", placeItems: "center" }}>{(pikForm.nickname || NONAME).slice(0, 1)}</span>
+              <span style={{ fontWeight: 800, fontSize: 13 }}>{pikForm.nickname || NONAME}</span>
+            </div>
 
             <button style={{ ...S.btn(true), marginTop: 18, background: T.ball, color: T.ballInk }} onClick={submitPik}>⚡ この内容で投稿する</button>
             <button style={S.btn(false)} onClick={() => setPikForm(null)}>キャンセル</button>
@@ -1265,7 +1460,7 @@ export default function PickleIkitai() {
             </div>
             <div style={{ fontWeight: 900, fontSize: 19, marginTop: 6 }}>{detail.name}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 4 }}>
-              {detail.area} ・ {detail.indoor ? "屋内" : "屋外"} ・ 池尻大橋から約{dist(HOME, detail).toFixed(1)}km
+              {detail.area} ・ <VenueTag indoor={detail.indoor} size={13} /> ・ 池尻大橋から約{dist(HOME, detail).toFixed(1)}km
             </div>
             <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 6 }}>{detail.rating}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.6 }}>{detail.note}</div>
