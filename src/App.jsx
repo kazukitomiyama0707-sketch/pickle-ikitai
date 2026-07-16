@@ -46,37 +46,75 @@ const ALL_DAYS = (() => {
 })();
 const MONTHS = [...new Set(ALL_DAYS.map((d) => d.month))].map((m) => ({ m, firstIdx: ALL_DAYS.find((d) => d.month === m).idx }));
 
+// 7:00〜24:00 を2時間刻みで連続表示（隙間なし）
 const BANDS = [
+  { key: "07", label: "7-9" },
   { key: "09", label: "9-11" },
   { key: "11", label: "11-13" },
   { key: "13", label: "13-15" },
   { key: "15", label: "15-17" },
-  { key: "18", label: "18-20" },
-  { key: "20", label: "20-22" },
+  { key: "17", label: "17-19" },
+  { key: "19", label: "19-21" },
+  { key: "21", label: "21-23" },
+  { key: "23", label: "23-24" },
 ];
+
+/* コート貸切1件だけの施設を機械的にplans化するヘルパー（label=元の表示文字列を保持） */
+const courtPlan = (fid, price, label) => ({ id: fid + "-c", name: "コート貸切", kind: "court", price, unit: "1h", capacity: null, label });
 
 const SEED_FACILITIES = [
-  { id: "pickle9", name: "pickle9 南青山", area: "港区", lat: 35.667, lng: 139.7173, indoor: true, live: true, cat: "dedicated", priceNum: 8800, price: "¥8,800/h〜", rating: "★5.0 (54)", url: "https://www.pickle9.jp/", note: "インドア専用・表参道駅5分・都内最高評価" },
-  { id: "one", name: "ピックルボールワン銀座新橋", area: "中央区", lat: 35.6694, lng: 139.7578, indoor: true, live: true, cat: "dedicated", priceNum: 6600, price: "¥6,600/h〜", rating: "★4.8 (104)", url: "https://ginza.pickle-one.com/", note: "都心1.5面・ショップ併設・日曜朝ドロップイン" },
-  { id: "pacific", name: "Pacific PICKLE CLUB 有明", area: "江東区", lat: 35.6402, lng: 139.7873, indoor: false, live: true, cat: "dedicated", priceNum: 7700, price: "¥7,700/h〜", rating: "★3.8 (22)", url: "https://pacificpickleclub.com/", note: "有明アーバンスポーツパーク内2面・飲食併設" },
-  { id: "sansan", name: "Sansanピックルボール 池袋", area: "豊島区", lat: 35.7282, lng: 139.7189, indoor: true, live: true, cat: "dedicated", priceNum: 6000, price: "¥6,000/h〜", rating: "★5.0 (2)", url: "https://sansan-pickleball.com/", note: "東池袋・サンソウゴビル・新規オープン" },
-  { id: "shiomi", name: "SENKO塩見テニスセンター", area: "江東区", lat: 35.6579, lng: 139.8198, indoor: false, live: true, cat: "conv", priceNum: 4400, price: "¥4,400/h〜", rating: "テニス転用", url: "https://reserve.tennisbear.net/", note: "テニスコートにテープで仮設・TennisBear予約" },
-  { id: "shibuya-pc", name: "shibuya pickleball club", area: "渋谷区", lat: 35.6632, lng: 139.6991, indoor: true, live: true, cat: "dedicated", priceNum: 5500, price: "¥5,500/h〜", rating: "新規", url: "https://shibuya-rental.space/", note: "宇田川町・レンタルスペース型" },
-  { id: "seibu", name: "SEIBU FAST SPORTS FIELD 品川", area: "港区", lat: 35.6276, lng: 139.7367, indoor: true, live: false, cat: "dedicated", priceNum: 7000, price: "要問合せ", rating: "★4.3 (6)", url: gmaps("SEIBU FAST SPORTS FIELD 品川 ピックルボール"), note: "品川プリンスホテル10F・ゴルフ併設のインドアコート" },
-  { id: "tebura", name: "手ぶらでピックルボール 有明店", area: "江東区", lat: 35.6351, lng: 139.7847, indoor: true, live: false, cat: "dedicated", priceNum: 3300, price: "低価格帯※", rating: "★4.7 (3)", url: gmaps("手ぶらでピックルボール有明店"), note: "器材レンタル込・平日は当日予約可の声あり", cheap: true },
-  { id: "tower", name: "Tokyo Tower Pickleball", area: "港区", lat: 35.6578, lng: 139.7449, indoor: false, live: false, cat: "dedicated", priceNum: 9999, price: "要問合せ", rating: "屋上コート", url: gmaps("Tokyo Tower Pickleball Friendship"), note: "東京タワー真下のルーフトップ・Instagram予約" },
-  { id: "ariake-park", name: "有明親水海浜公園コート", area: "江東区", lat: 35.6402, lng: 139.7866, indoor: false, live: false, cat: "public", priceNum: 2000, price: "公園料金※", rating: "公共", url: gmaps("有明親水海浜公園 ピックルボール"), note: "屋外ハード2面・ナイター照明・公園内コート", cheap: true },
-  { id: "shibuya-sc", name: "渋谷区スポーツセンター", area: "渋谷区", lat: 35.6756, lng: 139.6813, indoor: true, live: false, cat: "public", priceNum: 300, price: "¥300〜※", rating: "★4.0 (729)", url: gmaps("渋谷区スポーツセンター"), note: "ユーザー報告「渋谷の公共施設でプレーできた」・体育室の個人利用ルールは公式で確認を", cheap: true, unverified: true },
-  { id: "cosmic", name: "新宿コズミックセンター", area: "新宿区", lat: 35.705, lng: 139.7081, indoor: true, live: false, cat: "public", priceNum: 400, price: "区施設料金※", rating: "公共体育館", url: gmaps("新宿コズミックセンター"), note: "バドコート転用の可否は公式で確認を（区民優先・抽選あり）", cheap: true, unverified: true },
-  { id: "nakano", name: "中野区南部スポーツ・コミュニティプラザ", area: "中野区", lat: 35.6881, lng: 139.6687, indoor: true, live: false, cat: "public", priceNum: 200, price: "¥200/2h〜※", rating: "★4.0 (227)", url: gmaps("中野区南部スポーツコミュニティプラザ"), note: "小学校跡地の格安体育館・ピックル可否は公式で確認を", cheap: true, unverified: true },
-  { id: "omori", name: "大森スポーツセンター", area: "大田区", lat: 35.5809, lng: 139.7374, indoor: true, live: false, cat: "public", priceNum: 500, price: "¥500/室※", rating: "★3.9 (115)", url: gmaps("大森スポーツセンター"), note: "22時まで・大部屋貸切の実績あり・ピックル可否は公式で確認を", cheap: true, unverified: true },
-  { id: "katsushika", name: "Well Racket Club（葛飾）", area: "葛飾区", lat: 35.7909, lng: 139.8527, indoor: false, live: false, cat: "conv", priceNum: 3500, price: "要問合せ", rating: "★4.1 (37)", url: gmaps("Well Racket Club 葛飾"), note: "テニスクラブ・ピックル体験会/レッスンの口コミ多数" },
-  { id: "kawagoe", name: "ピックルボールスクール 川越", area: "埼玉県", lat: 35.9117, lng: 139.3883, indoor: false, live: false, cat: "trip", priceNum: 3000, price: "要問合せ", rating: "★5.0 (1)", url: gmaps("ピックルボールスクール 川越 笠幡"), note: "夜22:30まで・遠征組に人気。車なら関越で1本", cheap: true },
-];
+  { id: "pickle9", name: "pickle9 南青山", area: "港区", lat: 35.667, lng: 139.7173, indoor: true, live: true, cat: "dedicated", photo: "/photos/pickle9.jpg", plans: [courtPlan("pickle9", 8800, "¥8,800/h〜")], rating: "★5.0 (54)", url: "https://www.pickle9.jp/", note: "インドア専用・表参道駅5分・都内最高評価" },
+  { id: "one", name: "ピックルボールワン銀座新橋", area: "中央区", lat: 35.6694, lng: 139.7578, indoor: true, live: true, cat: "dedicated", plans: [
+      { id: "one-court-one", name: "ONEコート", kind: "court", price: 7000, unit: "1h", capacity: null },
+      { id: "one-court-fun", name: "FUNコート", kind: "court", price: 5000, unit: "1h", capacity: null },
+      { id: "one-taiken", name: "初心者体験会", kind: "event", price: 3300, unit: "回", capacity: 6 },
+      { id: "one-lesson", name: "実践ゲームレッスン", kind: "lesson", price: 5500, unit: "回", capacity: 8 },
+    ], rating: "★4.8 (104)", url: "https://ginza.pickle-one.com/", note: "都心1.5面・ショップ併設・コート貸切と体験会/レッスンを併催（RESERVA予約）" },
+  { id: "pacific", name: "Pacific PICKLE CLUB 有明", area: "江東区", lat: 35.6402, lng: 139.7873, indoor: false, live: true, cat: "dedicated", photo: "/photos/pacific.jpg", plans: [courtPlan("pacific", 7700, "¥7,700/h〜")], rating: "★3.8 (22)", url: "https://pacificpickleclub.com/", note: "有明アーバンスポーツパーク内2面・飲食併設" },
+  { id: "sansan", name: "Sansanピックルボール 池袋", area: "豊島区", lat: 35.7282, lng: 139.7189, indoor: true, live: true, cat: "dedicated", photo: "/photos/sansan.jpg", plans: [courtPlan("sansan", 6000, "¥6,000/h〜")], rating: "★5.0 (2)", url: "https://sansan-pickleball.com/", note: "東池袋・サンソウゴビル・新規オープン" },
+  { id: "shiomi", name: "SENKO塩見テニスセンター", area: "江東区", lat: 35.6579, lng: 139.8198, indoor: false, live: true, cat: "conv", plans: [courtPlan("shiomi", 4400, "¥4,400/h〜")], rating: "テニス転用", url: "https://reserve.tennisbear.net/", note: "テニスコートにテープで仮設・TennisBear予約" },
+  { id: "shibuya-pc", name: "shibuya pickleball club", area: "渋谷区", lat: 35.6632, lng: 139.6991, indoor: true, live: true, cat: "dedicated", plans: [courtPlan("shibuya-pc", 5500, "¥5,500/h〜")], rating: "新規", url: "https://shibuya-rental.space/", note: "宇田川町・レンタルスペース型" },
+  { id: "seibu", name: "SEIBU FAST SPORTS FIELD 品川", area: "港区", lat: 35.6276, lng: 139.7367, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("seibu", 7000, "要問合せ")], rating: "★4.3 (6)", url: gmaps("SEIBU FAST SPORTS FIELD 品川 ピックルボール"), note: "品川プリンスホテル10F・ゴルフ併設のインドアコート" },
+  { id: "tebura", name: "手ぶらでピックルボール 有明店", area: "江東区", lat: 35.6351, lng: 139.7847, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("tebura", 3300, "低価格帯※")], rating: "★4.7 (3)", url: gmaps("手ぶらでピックルボール有明店"), note: "器材レンタル込・平日は当日予約可の声あり", cheap: true },
+  { id: "tower", name: "Tokyo Tower Pickleball", area: "港区", lat: 35.6578, lng: 139.7449, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("tower", 9999, "要問合せ")], rating: "屋上コート", url: gmaps("Tokyo Tower Pickleball Friendship"), note: "東京タワー真下のルーフトップ・Instagram予約" },
+  { id: "ariake-park", name: "有明親水海浜公園コート", area: "江東区", lat: 35.6402, lng: 139.7866, indoor: false, live: false, cat: "public", plans: [courtPlan("ariake-park", 2000, "公園料金※")], rating: "公共", url: gmaps("有明親水海浜公園 ピックルボール"), note: "屋外ハード2面・ナイター照明・公園内コート", cheap: true },
+  { id: "shibuya-sc", name: "渋谷区スポーツセンター", area: "渋谷区", lat: 35.6756, lng: 139.6813, indoor: true, live: false, cat: "public", plans: [courtPlan("shibuya-sc", 300, "¥300〜※")], rating: "★4.0 (729)", url: gmaps("渋谷区スポーツセンター"), note: "ユーザー報告「渋谷の公共施設でプレーできた」・体育室の個人利用ルールは公式で確認を", cheap: true, unverified: true },
+  { id: "cosmic", name: "新宿コズミックセンター", area: "新宿区", lat: 35.705, lng: 139.7081, indoor: true, live: false, cat: "public", plans: [courtPlan("cosmic", 400, "区施設料金※")], rating: "公共体育館", url: gmaps("新宿コズミックセンター"), note: "バドコート転用の可否は公式で確認を（区民優先・抽選あり）", cheap: true, unverified: true },
+  { id: "nakano", name: "中野区南部スポーツ・コミュニティプラザ", area: "中野区", lat: 35.6881, lng: 139.6687, indoor: true, live: false, cat: "public", plans: [courtPlan("nakano", 200, "¥200/2h〜※")], rating: "★4.0 (227)", url: gmaps("中野区南部スポーツコミュニティプラザ"), note: "小学校跡地の格安体育館・ピックル可否は公式で確認を", cheap: true, unverified: true },
+  { id: "omori", name: "大森スポーツセンター", area: "大田区", lat: 35.5809, lng: 139.7374, indoor: true, live: false, cat: "public", plans: [courtPlan("omori", 500, "¥500/室※")], rating: "★3.9 (115)", url: gmaps("大森スポーツセンター"), note: "22時まで・大部屋貸切の実績あり・ピックル可否は公式で確認を", cheap: true, unverified: true },
+  { id: "katsushika", name: "WELL PICKLE CLUB（葛飾）", area: "葛飾区", lat: 35.7909, lng: 139.8527, indoor: false, live: false, cat: "dedicated", plans: [
+      { id: "katsushika-wd", name: "コート貸切（平日）", kind: "court", price: 4000, unit: "1h", capacity: null },
+      { id: "katsushika-we", name: "コート貸切（土日祝）", kind: "court", price: 6000, unit: "1h", capacity: null },
+    ], rating: "★4.1 (37)", url: "https://pickleclub.well-k.jp/", note: "西水元・屋外4面のピックル専用コート" },
+  { id: "kawagoe", name: "ピックルボールスクール 川越", area: "埼玉県", lat: 35.9117, lng: 139.3883, indoor: false, live: false, cat: "trip", plans: [courtPlan("kawagoe", 3000, "要問合せ")], rating: "★5.0 (1)", url: gmaps("ピックルボールスクール 川越 笠幡"), note: "夜22:30まで・遠征組に人気。車なら関越で1本", cheap: true },
 
-const EVENTS = [
-  { id: "mainichi", name: "毎日ピックル（調布）", when: "毎週日曜 10:00-12:00", area: "調布市", price: "¥1,500/人", note: "初心者歓迎の交流会。1人参加OK", url: "https://pickle-peak.com/" },
-  { id: "one-dropin", name: "ピックルワン銀座 Sunday Drop-in", when: "毎週日曜 6:00-9:00", area: "中央区", price: "¥2,000/人", note: "早朝オープンプレー", url: "https://ginza.pickle-one.com/" },
+  /* ---- 2026-07 追加調査で判明した施設 ---- */
+  { id: "vip-toyocho", name: "VIPインドアピックルボールクラブ 東陽町", area: "江東区", lat: 35.6706, lng: 139.8171, indoor: true, live: false, cat: "dedicated", plans: [
+      { id: "vip-court", name: "コートレンタル", kind: "court", price: 4400, unit: "50分", capacity: null, label: "¥4,400〜6,600/50-75分" },
+      { id: "vip-school", name: "スクール（月額）", kind: "lesson", price: 12540, unit: "月", capacity: null, label: "¥12,540〜13,585/月" },
+    ], rating: "2025年4月オープン", url: "https://viptop.jp/toyocho-pickleball/", note: "南砂・インドア3面・スクール併設" },
+  { id: "meiji-park", name: "MEIJI PARK PICKLEBALL COURT", area: "新宿区", lat: 35.6784, lng: 139.7161, indoor: false, live: false, cat: "dedicated", plans: [
+      { id: "meiji-court", name: "コートレンタル", kind: "court", price: 6600, unit: "1h", capacity: null, label: "¥6,600〜11,000/h" },
+      { id: "meiji-taiken", name: "初心者体験（20分）", kind: "event", price: 700, unit: "回", capacity: null },
+      { id: "meiji-lesson", name: "レッスン", kind: "lesson", price: 5500, unit: "1h", capacity: null },
+    ], rating: "都立明治公園内", url: "https://www.tennisbear.net/place/3621/info", note: "明治公園みち広場・屋外2面・TennisBear予約" },
+  { id: "hilton", name: "ヒルトン東京 ピックルボールコート", area: "新宿区", lat: 35.6938, lng: 139.6924, indoor: false, live: false, cat: "conv", plans: [
+      { id: "hilton-wd", name: "コート貸切（平日）", kind: "court", price: 6000, unit: "1h", capacity: null, label: "¥6,000〜8,000/h" },
+      { id: "hilton-we", name: "コート貸切（土日祝）", kind: "court", price: 8000, unit: "1h", capacity: null, label: "¥8,000〜10,000/h" },
+      { id: "hilton-lesson", name: "グループレッスン（80分）", kind: "lesson", price: 5000, unit: "回", capacity: null },
+    ], rating: "ホテル併設", url: "https://tokyo.hiltonjapan.co.jp/facilities/lp/fitness-center", note: "西新宿・屋外2面・宿泊者割引あり・ラケットレンタル¥800" },
+  { id: "cesame", name: "セサミテニススクール東久留米", area: "東京都下", lat: 35.7583, lng: 139.5294, indoor: false, live: false, cat: "conv", plans: [
+      { id: "cesame-member", name: "スクール会員（60分）", kind: "court", price: 1650, unit: "60分", capacity: null },
+      { id: "cesame-visitor", name: "ビジター（60分）", kind: "court", price: 3300, unit: "60分", capacity: null },
+    ], rating: "屋外4面", url: "https://www.cesame.co.jp/", note: "東久留米・アウトドア4面は都下最大級", cheap: true },
+  { id: "tip-shibuya", name: "ティップ.クロス TOKYO 渋谷", area: "渋谷区", lat: 35.6595, lng: 139.7005, indoor: true, live: false, cat: "conv", plans: [
+      { id: "tip-rental", name: "施設貸出（Aスタジオ）", kind: "court", price: 9900, unit: "回", capacity: null },
+    ], rating: "渋谷駅3分", url: "https://tip.tipness.co.jp/shop_info/SHP001/", note: "スタジオ貸出でピックル可・パドルレンタル¥550/本" },
+  { id: "chuo-sports", name: "中央区立総合スポーツセンター", area: "中央区", lat: 35.6863, lng: 139.7889, indoor: true, live: false, cat: "public", plans: [courtPlan("chuo-sports", 500, "区施設料金※")], rating: "公共体育館", url: "https://www.chuo-sports.jp/personal/", note: "日本橋浜町・2026年1月からピックル教室開講・バドコート転用", cheap: true, unverified: true },
+  { id: "picklr-toyosu", name: "PICKLR TOKYO 豊洲", area: "江東区", lat: 35.6533, lng: 139.7897, indoor: true, live: false, cat: "dedicated", plans: [
+      { id: "picklr-play", name: "PLAY会員（月額）", kind: "court", price: 19800, unit: "月", capacity: null, label: "入会¥16,500＋¥19,800/月" },
+      { id: "picklr-unlimited", name: "UNLIMITED会員（月額）", kind: "court", price: 29700, unit: "月", capacity: null, label: "入会¥27,500＋¥29,700/月" },
+    ], rating: "2026年秋オープン予定", url: "https://www.picklr.jp/locations/tokyo-toyosu", note: "塩浜・屋内7面の国内最大級・米PICKLR日本初上陸（開業前）", upcoming: true },
 ];
 
 const CATS = [
@@ -92,17 +130,153 @@ const AREA_COORDS = {
   "豊島区": { lat: 35.73, lng: 139.715 }, "渋谷区": { lat: 35.66, lng: 139.7 }, "新宿区": { lat: 35.7, lng: 139.71 },
   "世田谷区": { lat: 35.646, lng: 139.653 }, "目黒区": { lat: 35.63, lng: 139.69 }, "品川区": { lat: 35.61, lng: 139.73 },
   "中野区": { lat: 35.69, lng: 139.66 }, "大田区": { lat: 35.58, lng: 139.72 }, "葛飾区": { lat: 35.75, lng: 139.85 },
+  "東京都下": { lat: 35.7, lng: 139.5 },
   "埼玉県": { lat: 35.9, lng: 139.55 }, "神奈川県": { lat: 35.45, lng: 139.55 }, "千葉県": { lat: 35.6, lng: 140.1 }, "その他": { lat: 35.68, lng: 139.75 },
 };
 
-function slotStatusFor(fac, dayKey, bandKey) {
+/* 空き状況はプラン単位でモック（fac.id + plan.id でハッシュ） */
+function slotStatusFor(fac, plan, dayKey, bandKey) {
   if (!fac.live) return "portal";
   let h = 0;
-  const s = fac.id + dayKey + bandKey;
+  const s = fac.id + plan.id + dayKey + bandKey;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h % 10 < 4 ? "open" : "full";
 }
 const freshness = (offset) => (offset <= 7 ? "15分毎更新" : offset <= 30 ? "1時間毎更新" : "1日1回更新");
+
+/* プラン種別バッジ定義 */
+const KIND = {
+  court: { label: "コート貸切", icon: "🎾", color: T.court, bg: "#E7F2F1" },
+  event: { label: "体験会", icon: "🎪", color: "#8A4B2D", bg: "#F9EBE2" },
+  lesson: { label: "レッスン", icon: "📖", color: "#5B5B8A", bg: "#ECECF7" },
+};
+const courtPlansOf = (fac) => (fac.plans || []).filter((p) => p.kind === "court");
+const hasCourt = (fac) => courtPlansOf(fac).length > 0;
+const minCourtPrice = (fac) => {
+  const c = courtPlansOf(fac);
+  return c.length ? Math.min(...c.map((p) => p.price)) : Infinity;
+};
+const unitLabel = (u) => (u === "1h" ? "h" : u);
+const planPrice = (p) => p.label || `¥${p.price.toLocaleString()}/${unitLabel(p.unit)}`;
+/* 一覧カード用: コート貸切の最安値（labelがあればそのまま、無ければ「¥N/h〜」） */
+const cardPrice = (fac) => {
+  const c = courtPlansOf(fac);
+  if (!c.length) return null;
+  const m = c.reduce((a, b) => (a.price <= b.price ? a : b));
+  return m.label || `¥${m.price.toLocaleString()}/${unitLabel(m.unit)}〜`;
+};
+
+/* ============================================================
+   ピク活（プレー記録）— サ活のピックル版。
+   ★評価の口コミではなく「自分のプレー記録」。副産物として
+   混雑・コート状態・できた実績が溜まる。投稿はメモリ内state。
+   （本実装ではCloudflare D1に永続化する想定）
+   ============================================================ */
+const CROWD = { 1: { icon: "🟢", label: "空いてた" }, 2: { icon: "🟡", label: "ちょうどいい" }, 3: { icon: "🔴", label: "混んでた" } };
+const NONAME = "名無しピックラー";
+
+// XSS対策: タグ文字を除去しプレーンテキスト化（表示側もReactが自動エスケープ）
+const sanitizeText = (s = "") => String(s).replace(/[<>]/g, "").slice(0, 140);
+// NGフィルタ: 電話番号・URLはコメント不可
+const hasNG = (s = "") => /(https?:\/\/|www\.)/i.test(s) || /\d{2,4}-\d{2,4}-\d{3,4}/.test(s) || /\d{10,11}/.test(s);
+
+const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const todayISO = () => isoOf(new Date());
+const shiftISO = (days) => { const d = new Date(); d.setDate(d.getDate() + days); return isoOf(d); };
+
+// 混雑傾向サマリー（データ3件未満はnull）: timeBand×crowdを集計し1行生成
+const crowdTrend = (list) => {
+  if (!list || list.length < 3) return null;
+  const byBand = {};
+  for (const p of list) { if (!p.timeBand) continue; (byBand[p.timeBand] = byBand[p.timeBand] || []).push(p.crowd); }
+  let worst = null;
+  for (const band of Object.keys(byBand)) {
+    const arr = byBand[band];
+    if (arr.length < 2) continue;
+    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    if (!worst || avg > worst.avg) worst = { band, avg };
+  }
+  if (!worst) return null;
+  if (worst.avg >= 2.4) return `${worst.band}時は混みがち🔴`;
+  if (worst.avg <= 1.6) return `${worst.band}時は空いてる傾向🟢`;
+  return `${worst.band}時はちょうどいい🟡`;
+};
+
+// 空き枠シート用: 該当時間帯に「混みがち」の報告があるか（全ピク活横断・3件以上）
+const crowdWarn = (list, bandLabel) => {
+  const arr = (list || []).filter((p) => p.timeBand === bandLabel).map((p) => p.crowd);
+  if (arr.length < 3) return null;
+  const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+  return avg >= 2.4 ? "混みがちの報告あり🔴" : null;
+};
+
+let _pid = 1;
+const pk = (facilityId, playedAt, timeBand, partySize, crowd, comment, nickname = "", likes = 0, courtCondition = "") =>
+  ({ id: "pk" + _pid++, facilityId, playedAt, timeBand, partySize, crowd, courtCondition, comment, nickname, likes });
+
+const SEED_PIKKATSU = [
+  pk("pickle9", "2026-07-14", "19-21", 4, 3, "仕事帰りに4人で2h。夜はやっぱ混む、コート待ちしばらくあった", "レブンレイク", 12, "床コンディション◎"),
+  pk("pickle9", "2026-07-12", "11-13", 2, 2, "平日昼は取りやすい。2人でラリー中心にみっちり", "ダブルボギー", 5),
+  pk("pickle9", "2026-07-09", "19-21", 4, 3, "夜7時台は激戦。予約必須です", "", 8),
+  pk("one", "2026-07-15", "11-13", 4, 3, "初4人で2h。11時から一気に混み始めた。早めがおすすめ", "銀座ドロップ", 15),
+  pk("one", "2026-07-13", "11-13", 6, 3, "体験会あがりでそのままゲーム。人多めで待ちあり", "", 6),
+  pk("one", "2026-07-11", "9-11", 3, 1, "朝イチは空いてる。ほぼ貸切状態で最高だった", "モーニング勢", 9),
+  pk("one", "2026-07-08", "21-23", 4, 2, "夜遅めはちょうどいい人数感。ショップも見れた", "", 3),
+  pk("pacific", "2026-07-13", "15-17", 4, 2, "有明の屋外2面。風が抜けて気持ちいい", "ベイサイド", 7, "風やや強め"),
+  pk("pacific", "2026-07-10", "13-15", 2, 1, "昼下がりガラガラ。日差し強いので帽子推奨", "", 4),
+  pk("pacific", "2026-07-06", "15-17", 4, 3, "週末夕方は満員。飲食併設で待ち時間つぶせる", "", 5),
+  pk("sansan", "2026-07-12", "19-21", 4, 2, "池袋近くて便利。新しくて綺麗だった", "イケブクロ", 6),
+  pk("sansan", "2026-07-07", "21-23", 4, 1, "夜遅め空いてた。仕事帰りに丁度いい", "", 2),
+  pk("shiomi", "2026-07-14", "9-11", 4, 2, "テニスコートにテープ。ネットは自前で調整した", "テープ職人", 4, "ラインわかりにくい"),
+  pk("shiomi", "2026-07-11", "9-11", 2, 1, "朝は空いてる。TennisBearで前日予約した", "", 3),
+  pk("shiomi", "2026-07-05", "15-17", 4, 3, "週末午後は埋まりがち", "", 5),
+  pk("shibuya-pc", "2026-07-15", "13-15", 4, 2, "宇田川の貸しスペース。こじんまりだが清潔", "ウダガワ", 8),
+  pk("shibuya-pc", "2026-07-10", "13-15", 2, 2, "2人で軽く。渋谷駅近が神", "", 4),
+  pk("shibuya-pc", "2026-07-04", "19-21", 4, 3, "夜は人気で埋まる。早め予約を", "", 6),
+  pk("seibu", "2026-07-09", "15-17", 4, 2, "品川プリンス10F。ゴルフ併設で雰囲気良い", "シナガワ", 5),
+  pk("seibu", "2026-07-03", "13-15", 2, 1, "平日昼は空き。要問合せだが電話で取れた", "", 2),
+  pk("tebura", "2026-07-13", "11-13", 4, 1, "器材レンタル込で手ぶらOK。初心者に優しい", "テブラー", 7),
+  pk("tebura", "2026-07-08", "15-17", 4, 2, "有明。平日当日でも入れた", "", 3),
+  pk("tower", "2026-07-12", "15-17", 4, 2, "東京タワー真下の屋上。景色やばい", "タワーラバー", 20, "風強い日は注意"),
+  pk("tower", "2026-07-06", "13-15", 2, 3, "インスタ予約。週末は撮影勢も多く賑やか", "", 9),
+  pk("ariake-park", "2026-07-11", "9-11", 4, 1, "公園コート。朝は誰もいなくて貸切だった", "コウエン", 3, "ナイター照明あり"),
+  pk("ariake-park", "2026-07-05", "19-21", 4, 2, "ナイターで涼しくプレー", "", 4),
+  pk("shibuya-sc", "2026-07-10", "13-15", 4, 2, "体育室の個人利用枠でできた。ネット持参必須", "シブヤ民", 5),
+  pk("shibuya-sc", "2026-07-02", "9-11", 2, 1, "午前は取りやすい。区の施設で安い", "", 2),
+  pk("cosmic", "2026-07-09", "11-13", 4, 2, "バドコート枠。区民優先で抽選あり", "シンジュク", 3),
+  pk("cosmic", "2026-07-03", "19-21", 4, 3, "夜は抽選外れがち", "", 2),
+  pk("nakano", "2026-07-14", "19-21", 4, 3, "小学校跡地の体育館。夜は地元勢で満員", "ナカノ", 6),
+  pk("nakano", "2026-07-12", "19-21", 6, 3, "格安すぎて人気。2h前から並ぶ感じ", "", 4),
+  pk("nakano", "2026-07-07", "9-11", 2, 1, "朝は空き。200円台は神コスパ", "", 5, "床すべりやすい"),
+  pk("omori", "2026-07-08", "21-23", 4, 2, "22時までやれる。大部屋貸切の実績あり", "オオモリ", 3),
+  pk("omori", "2026-07-02", "15-17", 2, 1, "昼間は空いてた", "", 1),
+  pk("katsushika", "2026-07-06", "13-15", 4, 2, "テニスクラブの体験会。レッスン充実", "カツシカ", 4),
+  pk("katsushika", "2026-07-01", "11-13", 2, 2, "口コミ多いだけあって丁寧だった", "", 2),
+  pk("kawagoe", "2026-07-05", "21-23", 4, 2, "遠征。夜22:30までやれるの助かる", "エンセイ", 6, "車必須"),
+  pk("kawagoe", "2026-06-28", "19-21", 4, 1, "関越で1本。空いててのびのびできた", "", 3),
+];
+
+const PikCard = ({ k, onLike, facName, onFac }) => {
+  const c = CROWD[k.crowd] || CROWD[2];
+  return (
+    <div style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: "10px 12px", marginTop: 8, background: "#fff" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 800 }}>{k.nickname || NONAME}</div>
+        <div style={{ fontSize: 11, color: "#8B9B96" }}>{k.playedAt} ・ {k.timeBand}時</div>
+      </div>
+      {facName && (
+        <button onClick={onFac} style={{ marginTop: 4, padding: 0, border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 12, cursor: "pointer", textAlign: "left" }}>📍 {facName}</button>
+      )}
+      <div style={{ fontSize: 12, color: "#5E716C", marginTop: 5, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <span>{c.icon} {c.label}</span>
+        <span>👥 {k.partySize}人</span>
+        {k.courtCondition ? <span>📝 {k.courtCondition}</span> : null}
+      </div>
+      {k.comment ? <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{k.comment}</div> : null}
+      <button onClick={onLike} style={{ marginTop: 8, padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ballInk }}>⚡ {k.likes}</button>
+    </div>
+  );
+};
 
 const Ball = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden style={{ display: "inline-block", verticalAlign: "baseline" }}>
@@ -166,30 +340,14 @@ const CourtPattern = () => (
 );
 
 /* ------------------------------------------------------------
-   コート写真: カテゴリ別の実写を割り当て、読み込み失敗時は
-   ブランド調のSVG「雰囲気イラスト」に自動フォールバック。
+   コート写真: 施設の公式サイト画像（fac.photo）があればそれを使い、
+   無ければ 屋内/屋外 の代表写真にフォールバック。
+   さらに読み込み失敗時はブランド調SVGへ自動フォールバック。
    → どのコートも必ず1枚は絵が出る。
    ------------------------------------------------------------ */
-const uns = (id, w = 800) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`;
-const PHOTO_POOL = {
-  pickle: ["1626224583764-f87db24ac4ea", "1595435742656-5272d0b3fa82"],
-  outdoor: ["1622163642998-1ea32b0bbc67", "1587280501635-68a0e82cd5ff"],
-  tennis: ["1554068865-24cecd4e34b8", "1587280501635-68a0e82cd5ff"],
-  gym: ["1519861531473-9200262188bf", "1613918431703-aa50889e3be9"],
-};
-const hashStr = (s = "") => {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-};
-function photoFor(fac, w = 800) {
+function photoFor(fac) {
   if (fac.photo) return fac.photo;
-  let pool;
-  if (fac.cat === "public") pool = PHOTO_POOL.gym;
-  else if (fac.cat === "conv") pool = PHOTO_POOL.tennis;
-  else if (fac.cat === "trip") pool = PHOTO_POOL.outdoor;
-  else pool = fac.indoor ? PHOTO_POOL.pickle : PHOTO_POOL.outdoor;
-  return uns(pool[hashStr(fac.id) % pool.length], w);
+  return fac.indoor ? "/court-indoor.jpg" : "/court-outdoor.jpg";
 }
 
 const CourtScene = ({ indoor, style }) => (
@@ -242,6 +400,25 @@ const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
   );
 };
 
+const OPERATOR = "MUFASA Technology";
+const CONTACT_EMAIL = "contact@pickleikitai.com";
+const TERMS = [
+  ["第1条（サービス内容）", "「ピックルイキタイ」（以下、本サービス）は、東京および関東圏のピックルボールコート・イベント情報を横断的に紹介する情報ポータルです。コートの予約・利用契約は利用者と各施設との間で直接成立し、本サービスはその当事者となりません。"],
+  ["第2条（情報の正確性）", "本サービスは掲載情報の正確性・完全性・最新性を保証しません。料金・空き状況・ピックルボール利用の可否等は、必ず各施設の公式情報をご確認ください。空き枠表示は参考情報であり、実際の予約可否を保証するものではありません。"],
+  ["第3条（ユーザー投稿）", "利用者はコート情報およびプレー記録（ピク活）を投稿できます。虚偽の情報、第三者の権利を侵害する内容、施設の営業を妨害する内容、電話番号・URL等の連絡先や個人を特定する情報を投稿してはなりません。"],
+  ["第4条（投稿の取扱い）", "投稿された内容は本サービス上での表示および品質向上のために利用されます。運営者は不適切と判断した投稿を予告なく削除できます。"],
+  ["第5条（免責）", "本サービスの利用または利用不能により生じたいかなる損害についても、運営者は責任を負いません。外部リンク先の内容についても同様とします。"],
+  ["第6条（規約の変更）", "運営者は必要に応じて本規約を変更できます。変更後の規約は本ページに掲載した時点で効力を生じます。"],
+];
+const PRIVACY = [
+  ["取得する情報", "本サービスは、ユーザー投稿（ニックネーム・コメント・プレー記録等、いずれも任意入力）、およびお問い合わせ時にご入力いただくお名前・メールアドレス・内容を取得します。氏名・住所・電話番号等の入力は求めていません。"],
+  ["利用目的", "取得した情報は、投稿の表示、サービスの改善、およびお問い合わせへの回答のために利用します。"],
+  ["第三者提供", "法令に基づく場合を除き、取得した情報を本人の同意なく第三者に提供することはありません。"],
+  ["外部リンク・アクセス解析", "本サービスには各施設の公式サイト等への外部リンクが含まれます。遷移先での個人情報の取扱いは各サイトのポリシーに従います。利用状況の把握のためアクセス解析を用いる場合があります。"],
+  ["開示・訂正・削除", "投稿やお問い合わせ内容の開示・訂正・削除をご希望の場合は、下記の問い合わせ先までご連絡ください。"],
+  ["改定", "本ポリシーは必要に応じて改定されます。改定後は本ページに掲載した時点で効力を生じます。"],
+];
+
 export default function PickleIkitai() {
   const [winStart, setWinStart] = useState(0);
   const [dayIdx, setDayIdx] = useState(0);
@@ -255,20 +432,30 @@ export default function PickleIkitai() {
   const [userFacs, setUserFacs] = useState([]);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({ name: "", area: "港区", cat: "public", indoor: "indoor", price: "", note: "", url: "" });
+  const [pikkatsu, setPikkatsu] = useState(SEED_PIKKATSU);
+  const [pikForm, setPikForm] = useState(null);
+  const [detailPikLimit, setDetailPikLimit] = useState(3);
+  const [legalView, setLegalView] = useState(null);
+  const [contact, setContact] = useState({ name: "", email: "", message: "", sent: false });
   const timers = useRef([]);
   const idRef = useRef(1);
+  const pikIdRef = useRef(1);
+  const postCount = useRef({});
 
   // セクション参照（アンカースクロール用）
   const refAbout = useRef(null);
   const refSlots = useRef(null);
   const refList = useRef(null);
   const refEvents = useRef(null);
+  const refPik = useRef(null);
   const refAdd = useRef(null);
+  const refContact = useRef(null);
   const scrollTo = (r) => r.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const ALL_FACS = useMemo(() => [...SEED_FACILITIES, ...userFacs], [userFacs]);
   const areas = ["all", ...new Set(ALL_FACS.filter((f) => f.cat !== "trip").map((f) => f.area))];
-  const visibleFacs = ALL_FACS.filter((f) => areaFilter === "all" || f.area === areaFilter);
+  // 開業前(upcoming)の施設は空き枠グリッドの集計対象から除外（誤情報防止）
+  const visibleFacs = ALL_FACS.filter((f) => !f.upcoming && (areaFilter === "all" || f.area === areaFilter));
 
   const windowDays = ALL_DAYS.slice(winStart, winStart + 3);
   const selDay = ALL_DAYS[dayIdx] || ALL_DAYS[0];
@@ -285,25 +472,39 @@ export default function PickleIkitai() {
     setDayIdx(start);
   };
 
+  // グリッドの「空きあり」件数は kind==="court" のプランのみ集計（鉄則）
   const grid = useMemo(() => {
     const g = {};
     for (const b of BANDS) {
-      let open = 0, portal = 0;
+      let open = 0, portal = 0, event = 0;
       for (const f of visibleFacs) {
-        const st = slotStatusFor(f, selDay.key, b.key);
-        if (st === "open") open++;
-        if (st === "portal") portal++;
+        for (const p of f.plans || []) {
+          const st = slotStatusFor(f, p, selDay.key, b.key);
+          if (p.kind === "court") {
+            if (st === "open") open++;
+            else if (st === "portal") portal++;
+          } else if (st === "open") {
+            event++;
+          }
+        }
       }
-      g[b.key] = { open, portal };
+      g[b.key] = { open, portal, event };
     }
     return g;
   }, [areaFilter, userFacs, dayIdx]);
 
   const listFacs = useMemo(() => {
     let arr = ALL_FACS.filter((f) => catFilter === "all" || f.cat === catFilter).map((f) => ({ ...f, km: dist(HOME, f) }));
-    arr.sort((a, b) => (sortKey === "price" ? a.priceNum - b.priceNum : a.km - b.km));
+    arr.sort((a, b) => (sortKey === "price" ? minCourtPrice(a) - minCourtPrice(b) : a.km - b.km));
     return arr;
   }, [catFilter, sortKey, userFacs]);
+
+  // イベント/レッスンは全施設のplansから自動集計
+  const eventPlans = useMemo(() => {
+    const out = [];
+    for (const f of ALL_FACS) for (const p of f.plans || []) if (p.kind !== "court") out.push({ f, p });
+    return out;
+  }, [userFacs]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -313,6 +514,51 @@ export default function PickleIkitai() {
   const outbound = (fac) => {
     setClicks((c) => c + 1);
     if (fac.url) window.open(fac.url, "_blank");
+  };
+
+  // ---- ピク活 ----
+  const pikSort = (a, b) => (a.playedAt < b.playedAt ? 1 : a.playedAt > b.playedAt ? -1 : a.id < b.id ? 1 : -1);
+  const pikOf = (facId) => pikkatsu.filter((p) => p.facilityId === facId).sort(pikSort);
+  const pikCount = (facId) => pikkatsu.reduce((n, p) => n + (p.facilityId === facId ? 1 : 0), 0);
+  const facById = (id) => ALL_FACS.find((f) => f.id === id);
+  const openDetail = (f) => { setDetail(f); setDetailPikLimit(3); };
+  const likePik = (id) => setPikkatsu((list) => list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)));
+  const openPikForm = (fac) => setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: "", courtCondition: "" });
+  const timeline = useMemo(() => [...pikkatsu].sort(pikSort).slice(0, 10), [pikkatsu]);
+  const submitContact = (e) => {
+    e.preventDefault();
+    if (!contact.name.trim() || !contact.email.trim() || !contact.message.trim()) { showToast("お名前・メール・内容を入力してください"); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email.trim())) { showToast("メールアドレスの形式をご確認ください"); return; }
+    const body = new URLSearchParams({ "form-name": "contact", name: contact.name, email: contact.email, message: contact.message }).toString();
+    fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body })
+      .then(() => { setContact({ name: "", email: "", message: "", sent: true }); showToast("お問い合わせを送信しました"); })
+      .catch(() => showToast("送信に失敗しました。時間をおいて再度お試しください"));
+  };
+
+  const submitPik = () => {
+    const pf = pikForm;
+    if (!pf) return;
+    if (!pf.playedAt || !pf.timeBand) { showToast("日付と時間帯を選んでください"); return; }
+    const used = postCount.current[pf.facilityId] || 0;
+    if (used >= 3) { showToast("同じコートへの投稿は1日3件までです"); return; }
+    const comment = sanitizeText(pf.comment);
+    if (comment && hasNG(comment)) { showToast("コメントに電話番号・URLは含められません"); return; }
+    const rec = {
+      id: "upk" + pikIdRef.current++,
+      facilityId: pf.facilityId,
+      playedAt: pf.playedAt,
+      timeBand: pf.timeBand,
+      partySize: pf.partySize,
+      crowd: pf.crowd,
+      courtCondition: sanitizeText(pf.courtCondition),
+      comment,
+      nickname: sanitizeText(pf.nickname).slice(0, 20),
+      likes: 0,
+    };
+    postCount.current[pf.facilityId] = used + 1;
+    setPikkatsu((list) => [rec, ...list]);
+    setPikForm(null);
+    showToast("ナイスピク活⚡");
   };
 
   const doSearch = () => {
@@ -328,17 +574,17 @@ export default function PickleIkitai() {
       return;
     }
     const coords = AREA_COORDS[form.area] || AREA_COORDS["その他"];
+    const fid = "user" + idRef.current++;
     const priceNum = parseInt(form.price.replace(/[^0-9]/g, ""), 10);
     const newFac = {
-      id: "user" + idRef.current++,
+      id: fid,
       name: form.name.trim(),
       area: form.area,
       lat: coords.lat, lng: coords.lng,
       indoor: form.indoor === "indoor",
       live: false,
       cat: form.cat,
-      priceNum: isNaN(priceNum) ? 9998 : priceNum,
-      price: form.price.trim() ? form.price.trim() + "※" : "要問合せ",
+      plans: [{ id: fid + "-c", name: "コート貸切", kind: "court", price: isNaN(priceNum) ? 9998 : priceNum, unit: "1h", capacity: null, label: form.price.trim() ? form.price.trim() + "※" : "要問合せ" }],
       rating: "ユーザー投稿",
       note: form.note.trim() || "みんなの投稿情報",
       url: form.url.trim() || gmaps(form.name.trim() + " ピックルボール"),
@@ -362,6 +608,8 @@ export default function PickleIkitai() {
     cell: { flex: 1, padding: "12px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer" },
     openBadge: { display: "flex", alignItems: "center", gap: 5, fontWeight: 900, fontSize: 16 },
     portalBadge: { fontSize: 11, fontWeight: 700, color: "#5E716C", border: `1.5px dashed #B8C4BF`, borderRadius: 8, padding: "1px 7px" },
+    eventBadge: { fontSize: 11, fontWeight: 800, color: "#8A4B2D", background: "#F9EBE2", borderRadius: 8, padding: "2px 8px", marginTop: 2 },
+    footLink: { border: "none", background: "none", color: "#fff", opacity: 0.9, fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: FONT },
     fullTxt: { fontSize: 13, color: T.full, fontWeight: 700 },
     sheetBack: { position: "fixed", inset: 0, background: "rgba(14,42,43,0.45)", zIndex: 40 },
     sheet: { position: "fixed", left: 0, right: 0, bottom: 0, maxWidth: 520, margin: "0 auto", background: T.white, borderRadius: "22px 22px 0 0", zIndex: 50, padding: "10px 16px 28px", maxHeight: "78vh", overflowY: "auto" },
@@ -430,6 +678,7 @@ export default function PickleIkitai() {
           <a onClick={() => scrollTo(refSlots)}>空き枠</a>
           <a onClick={() => scrollTo(refList)}>コート一覧</a>
           <a onClick={() => scrollTo(refEvents)}>イベント</a>
+          <a onClick={() => scrollTo(refPik)}>ピク活</a>
           <a onClick={() => scrollTo(refAdd)}>コート登録</a>
         </div>
         <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", opacity: 0.85, border: "1.5px solid rgba(255,255,255,0.6)", borderRadius: 999, padding: "3px 11px", flexShrink: 0 }}>β版</span>
@@ -557,6 +806,7 @@ export default function PickleIkitai() {
                       <span style={S.fullTxt}>満</span>
                     )}
                     {g.portal > 0 && <span style={S.portalBadge}>ほか{g.portal}件は公式で確認</span>}
+                    {g.event > 0 && <span style={S.eventBadge}>🎪 体験会あり</span>}
                   </button>
                 </div>
               );
@@ -585,7 +835,7 @@ export default function PickleIkitai() {
 
           <div className="cardGrid">
             {listFacs.map((f) => (
-              <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => setDetail(f)}>
+              <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => openDetail(f)}>
                 <div style={{ marginBottom: 10 }}>
                   <CourtImage fac={f} height={118} rounded={11} />
                 </div>
@@ -593,14 +843,19 @@ export default function PickleIkitai() {
                   <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <CatBadge cat={f.cat} />
                     {f.userSubmitted && <UserBadge />}
+                    {!hasCourt(f) && <span style={{ fontSize: 10, fontWeight: 800, color: "#8A4B2D", background: "#F9EBE2", borderRadius: 6, padding: "2px 6px" }}>体験会のみ</span>}
+                    {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>開業前</span>}
                     {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
                     {f.live && <span style={{ fontSize: 10, fontWeight: 800, color: T.court, border: `1px solid ${T.court}`, borderRadius: 6, padding: "1px 5px" }}>空き枠表示</span>}
+                    {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#8B9B96", flexShrink: 0 }}>{f.km.toFixed(1)}km</div>
                 </div>
                 <div style={{ fontWeight: 900, fontSize: 15, marginTop: 6 }}>{f.name}</div>
                 <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
-                  {f.area} ・ {f.indoor ? "屋内" : "屋外"} ・ <span style={{ fontWeight: 800, color: T.court }}>{f.price}</span>
+                  {f.area} ・ {f.indoor ? "屋内" : "屋外"} ・ {hasCourt(f)
+                    ? <span style={{ fontWeight: 800, color: T.court }}>{cardPrice(f)}</span>
+                    : <span style={{ fontWeight: 800, color: "#8A4B2D" }}>体験会のみ</span>}
                 </div>
                 <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 3 }}>{f.note}</div>
               </button>
@@ -618,20 +873,54 @@ export default function PickleIkitai() {
           <SectionHead kicker="EVENTS" title="イベント" />
           <p style={{ textAlign: "center", fontSize: 13, color: "#5E716C", marginTop: 6 }}>1人でも参加できるオープンプレー・交流会</p>
           <div className="cardGrid" style={{ maxWidth: 680, margin: "16px auto 0" }}>
-            {EVENTS.map((e) => (
-              <div key={e.id} style={S.facCard}>
-                <div style={{ fontWeight: 900, fontSize: 15 }}>{e.name}</div>
-                <div style={{ fontSize: 13, marginTop: 4, color: T.court, fontWeight: 800 }}>{e.when}</div>
-                <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>{e.area} ・ {e.price} ・ {e.note}</div>
-                <button style={S.btn(true)} onClick={() => { setClicks((c) => c + 1); window.open(e.url, "_blank"); }}>詳細を見る</button>
-              </div>
-            ))}
+            {eventPlans.length === 0 && (
+              <p style={{ textAlign: "center", fontSize: 13, color: "#8B9B96", gridColumn: "1/-1" }}>現在、掲載中の体験会・レッスンはありません</p>
+            )}
+            {eventPlans.map(({ f, p }) => {
+              const k = KIND[p.kind];
+              return (
+                <div key={f.id + p.id} style={S.facCard}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: k.color, background: k.bg, borderRadius: 6, padding: "2px 6px" }}>{k.icon} {k.label}</span>
+                    <div style={{ fontWeight: 900, fontSize: 15 }}>{p.name}</div>
+                  </div>
+                  <div style={{ fontSize: 13, marginTop: 5, color: "#5E716C", fontWeight: 700 }}>{f.name}</div>
+                  <div style={{ fontSize: 13, marginTop: 4, color: T.court, fontWeight: 800 }}>
+                    {planPrice(p)}{p.capacity ? ` ・ 定員〜${p.capacity}名` : ""}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 3 }}>{f.area}</div>
+                  <button style={S.btn(true)} onClick={() => outbound(f)}>予約する →</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== みんなのピク活 ==================== */}
+      <section ref={refPik} className="section" style={{ background: "#fff" }}>
+        <div className="sectionInner">
+          <SectionHead kicker="PIKKATSU" title="みんなのピク活" />
+          <p style={{ textAlign: "center", fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.8 }}>
+            ⚡ その日どこでどれくらいプレーできたか、みんなの記録。<br className="hideMobile" />
+            ★評価じゃなく「自分のプレー記録」。混雑や実績の生きた情報がここに溜まる。
+          </p>
+          <div style={{ maxWidth: 560, margin: "18px auto 0" }}>
+            {timeline.map((k) => {
+              const f = facById(k.facilityId);
+              return (
+                <PikCard key={k.id} k={k} facName={f ? f.name : ""} onFac={() => f && openDetail(f)} onLike={() => likePik(k.id)} />
+              );
+            })}
+          </div>
+          <div style={{ textAlign: "center", fontSize: 11, color: "#AEBCB7", marginTop: 16 }}>
+            最新{timeline.length}件を表示 ・ 各コートの詳細からもっと見られます
           </div>
         </div>
       </section>
 
       {/* ==================== コート登録 ==================== */}
-      <section ref={refAdd} className="section" style={{ background: "#fff" }}>
+      <section ref={refAdd} className="section" style={{ background: T.bg }}>
         <div className="narrowInner">
           <SectionHead kicker="ADD COURT" title="コートを登録する" />
           <p style={{ textAlign: "center", fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.8 }}>
@@ -680,6 +969,53 @@ export default function PickleIkitai() {
         </div>
       </section>
 
+      {/* ==================== お問い合わせ ==================== */}
+      <section ref={refContact} className="section" style={{ background: "#fff" }}>
+        <div className="narrowInner">
+          <SectionHead kicker="CONTACT" title="お問い合わせ" />
+          <p style={{ textAlign: "center", fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.8 }}>
+            掲載情報の修正依頼・掲載希望・削除依頼など、お気軽にどうぞ。<br className="hideMobile" />
+            施設運営者の方からのご連絡も歓迎します。
+          </p>
+
+          <div style={{ ...S.facCard, marginTop: 18, padding: 20 }}>
+            {contact.sent ? (
+              <div style={{ textAlign: "center", padding: "18px 0" }}>
+                <div style={{ fontSize: 34 }}>📮</div>
+                <div style={{ fontWeight: 900, fontSize: 16, marginTop: 8 }}>送信しました</div>
+                <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.8 }}>
+                  ご連絡ありがとうございます。<br />内容を確認のうえ、順次ご返信します。
+                </div>
+                <button style={{ ...S.btn(false), marginTop: 14 }} onClick={() => setContact({ name: "", email: "", message: "", sent: false })}>続けて送る</button>
+              </div>
+            ) : (
+              <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field" onSubmit={submitContact}>
+                <input type="hidden" name="form-name" value="contact" />
+                <p style={{ display: "none" }}>
+                  <label>ここは入力しないでください: <input name="bot-field" /></label>
+                </p>
+
+                <label style={{ ...S.label, marginTop: 0 }}>お名前 *</label>
+                <input name="name" style={S.input} placeholder="例: 富山 一樹" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
+
+                <label style={S.label}>メールアドレス *</label>
+                <input name="email" type="email" style={S.input} placeholder="例: you@example.com" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+
+                <label style={S.label}>内容 *</label>
+                <textarea name="message" style={{ ...S.input, minHeight: 120, resize: "vertical" }} placeholder="例: 掲載情報に誤りがあります / コートの掲載を希望します" value={contact.message} onChange={(e) => setContact({ ...contact, message: e.target.value })} />
+
+                <button type="submit" style={{ ...S.btn(true), marginTop: 18 }}>この内容で送信する</button>
+                <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 10, textAlign: "center", lineHeight: 1.8 }}>
+                  送信により<button type="button" onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・
+                  <button type="button" onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします<br />
+                  メールでも受付: {CONTACT_EMAIL}
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ==================== フッター ==================== */}
       <footer style={{ background: T.hero1, color: "#fff", padding: "44px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <CourtPattern />
@@ -689,9 +1025,15 @@ export default function PickleIkitai() {
             <BallGuy size={34} mood="happy" />
             <BallGuy size={34} flip mood="oops" />
           </div>
+          <div style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", marginTop: 22 }}>
+            <button style={S.footLink} onClick={() => setLegalView("terms")}>利用規約</button>
+            <button style={S.footLink} onClick={() => setLegalView("privacy")}>プライバシーポリシー</button>
+            <button style={S.footLink} onClick={() => scrollTo(refContact)}>お問い合わせ</button>
+          </div>
           <div style={{ fontSize: 11, opacity: 0.7, marginTop: 16, lineHeight: 1.9 }}>
             掲載情報の正確性は保証されません。予約・利用条件は各施設の公式情報をご確認ください。<br />
-            © {new Date().getFullYear()} MUFASA Technology — 世界をかっこよく
+            運営: {OPERATOR} ・ {CONTACT_EMAIL}<br />
+            © {new Date().getFullYear()} {OPERATOR} — 世界をかっこよく
           </div>
         </div>
       </footer>
@@ -704,29 +1046,135 @@ export default function PickleIkitai() {
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 10px" }} />
             <div style={{ fontWeight: 900, fontSize: 17 }}>{sheet.day.full} {sheet.band.label}時</div>
             <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 2 }}>{freshness(sheet.day.offset)}のデータ</div>
-            {[...visibleFacs].sort((a, b) => (slotStatusFor(a, sheet.day.key, sheet.band.key) === "open" ? -1 : 1) - (slotStatusFor(b, sheet.day.key, sheet.band.key) === "open" ? -1 : 1)).map((f) => {
-              const st = slotStatusFor(f, sheet.day.key, sheet.band.key);
-              return (
-                <div key={f.id} style={{ ...S.facCard, marginTop: 10, opacity: st === "full" ? 0.45 : 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                        <CatBadge cat={f.cat} />
-                        {f.userSubmitted && <UserBadge />}
-                        <div style={{ fontWeight: 900, fontSize: 15 }}>{f.name}</div>
-                      </div>
-                      <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
-                        {f.area} ・ {f.indoor ? "屋内" : "屋外"} ・ {f.price}
-                      </div>
-                    </div>
-                    {st === "open" && <Ball size={20} />}
-                  </div>
-                  {st === "open" && <button style={S.btn(true)} onClick={() => outbound(f)}>公式サイトで予約する →</button>}
-                  {st === "portal" && <button style={S.btn(false)} onClick={() => outbound(f)}>空き状況を公式で確認 →</button>}
-                  {st === "full" && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 800, color: "#9AA8A3" }}>満枠</div>}
+            {(() => {
+              const warn = crowdWarn(pikkatsu, sheet.band.label);
+              return warn ? (
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#B23B2E", background: "#FBE7E3", borderRadius: 10, padding: "8px 10px", marginTop: 10 }}>
+                  ⚠️ この時間帯は{warn}
                 </div>
-              );
-            })}
+              ) : null;
+            })()}
+            {[...visibleFacs]
+              .map((f) => {
+                const rows = (f.plans || []).map((p) => ({ p, st: slotStatusFor(f, p, sheet.day.key, sheet.band.key) }));
+                return { f, shown: rows.filter((r) => r.st !== "full") };
+              })
+              .filter((x) => x.shown.length > 0)
+              .sort((a, b) => b.shown.length - a.shown.length)
+              .map(({ f, shown }) => (
+                <div key={f.id} style={{ ...S.facCard, marginTop: 10 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <CourtImage fac={f} height={96} rounded={10} />
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <CatBadge cat={f.cat} />
+                    {f.userSubmitted && <UserBadge />}
+                    <div style={{ fontWeight: 900, fontSize: 15 }}>{f.name}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 2 }}>{f.area} ・ {f.indoor ? "屋内" : "屋外"}</div>
+                  {shown.map(({ p, st }) => {
+                    const k = KIND[p.kind];
+                    return (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.line}` }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: k.color, background: k.bg, borderRadius: 6, padding: "2px 6px" }}>{k.icon} {k.label}</span>
+                            <span style={{ fontWeight: 800, fontSize: 13 }}>{p.name}</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
+                            {planPrice(p)}{p.capacity ? ` ・ 〜${p.capacity}名` : ""} ・ {st === "open" ? "空きあり" : "公式で確認"}
+                          </div>
+                        </div>
+                        <button style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 10, border: "none", fontWeight: 800, fontSize: 12, background: st === "open" ? T.court : "#EFF2EF", color: st === "open" ? "#fff" : T.ink, cursor: "pointer" }} onClick={() => outbound(f)}>予約する →</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: 利用規約 / プライバシーポリシー ==================== */}
+      {legalView && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 80 }} onClick={() => setLegalView(null)} />
+          <div style={{ ...S.sheet, zIndex: 90 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
+            <div style={{ fontWeight: 900, fontSize: 18 }}>{legalView === "terms" ? "利用規約" : "プライバシーポリシー"}</div>
+            <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 3 }}>最終更新: {isoOf(new Date())} ・ 運営: {OPERATOR}</div>
+            {(legalView === "terms" ? TERMS : PRIVACY).map(([h, b]) => (
+              <div key={h} style={{ marginTop: 16 }}>
+                <div style={{ fontWeight: 900, fontSize: 13, color: T.court }}>{h}</div>
+                <div style={{ fontSize: 13, color: "#455B57", marginTop: 5, lineHeight: 1.9 }}>{b}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 12, color: "#5E716C", marginTop: 18, lineHeight: 1.9, borderTop: `1px solid ${T.line}`, paddingTop: 14 }}>
+              <b>お問い合わせ先</b><br />
+              {OPERATOR}<br />
+              {CONTACT_EMAIL}
+            </div>
+            <button style={{ ...S.btn(true), marginTop: 18 }} onClick={() => setLegalView(null)}>閉じる</button>
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: ピク活投稿 ==================== */}
+      {pikForm && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 60 }} onClick={() => setPikForm(null)} />
+          <div style={{ ...S.sheet, zIndex: 70 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
+            <div style={{ fontWeight: 900, fontSize: 17 }}>⚡ ピク活を投稿</div>
+            <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 3 }}>{pikForm.facilityName}</div>
+
+            <label style={S.label}>いつ？ *</label>
+            <div style={S.segRow}>
+              {[
+                { k: "today", label: "今日", iso: todayISO() },
+                { k: "yesterday", label: "昨日", iso: shiftISO(-1) },
+                { k: "other", label: "その他", iso: pikForm.playedAt },
+              ].map((d) => (
+                <button key={d.k} style={S.seg(pikForm.dateChoice === d.k)} onClick={() => setPikForm({ ...pikForm, dateChoice: d.k, playedAt: d.k === "other" ? pikForm.playedAt : d.iso })}>{d.label}</button>
+              ))}
+            </div>
+            {pikForm.dateChoice === "other" && (
+              <input type="date" max={todayISO()} style={S.input} value={pikForm.playedAt} onChange={(e) => setPikForm({ ...pikForm, playedAt: e.target.value })} />
+            )}
+
+            <label style={S.label}>時間帯 *</label>
+            <div className="chipScroll" style={{ marginTop: 6, flexWrap: "wrap" }}>
+              {BANDS.map((b) => (
+                <button key={b.key} style={{ ...S.chip(pikForm.timeBand === b.label), fontSize: 12, padding: "6px 11px" }} onClick={() => setPikForm({ ...pikForm, timeBand: b.label })}>{b.label}時</button>
+              ))}
+            </div>
+
+            <label style={S.label}>何人で？</label>
+            <div style={S.segRow}>
+              {[2, 3, 4, 6].map((n) => (
+                <button key={n} style={S.seg(pikForm.partySize === n)} onClick={() => setPikForm({ ...pikForm, partySize: n })}>{n === 6 ? "6+" : n}人</button>
+              ))}
+            </div>
+
+            <label style={S.label}>混み具合</label>
+            <div style={S.segRow}>
+              {[1, 2, 3].map((c) => (
+                <button key={c} style={S.seg(pikForm.crowd === c)} onClick={() => setPikForm({ ...pikForm, crowd: c })}>{CROWD[c].icon} {CROWD[c].label}</button>
+              ))}
+            </div>
+
+            <label style={S.label}>コートの状態（任意）</label>
+            <input style={S.input} maxLength={30} placeholder="例: 風強め / 床すべる / ネット持参必須" value={pikForm.courtCondition} onChange={(e) => setPikForm({ ...pikForm, courtCondition: e.target.value })} />
+
+            <label style={S.label}>ひとこと（任意・140字）</label>
+            <textarea style={{ ...S.input, minHeight: 74, resize: "vertical" }} maxLength={140} placeholder="例: 初4人で2h。11時から混み始めた" value={pikForm.comment} onChange={(e) => setPikForm({ ...pikForm, comment: e.target.value })} />
+            <div style={{ fontSize: 10, color: "#AEBCB7", textAlign: "right", marginTop: 2 }}>{pikForm.comment.length}/140 ・ 電話番号・URLは投稿できません</div>
+
+            <label style={S.label}>ニックネーム（任意）</label>
+            <input style={S.input} maxLength={20} placeholder={NONAME} value={pikForm.nickname} onChange={(e) => setPikForm({ ...pikForm, nickname: e.target.value })} />
+
+            <button style={{ ...S.btn(true), marginTop: 18, background: T.ball, color: T.ballInk }} onClick={submitPik}>⚡ この内容で投稿する</button>
+            <button style={S.btn(false)} onClick={() => setPikForm(null)}>キャンセル</button>
           </div>
         </>
       )}
@@ -747,17 +1195,67 @@ export default function PickleIkitai() {
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 4 }}>
               {detail.area} ・ {detail.indoor ? "屋内" : "屋外"} ・ 池尻大橋から約{dist(HOME, detail).toFixed(1)}km
             </div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.court, marginTop: 8 }}>{detail.price} <span style={{ fontWeight: 600, color: "#8B9B96", fontSize: 12 }}>{detail.rating}</span></div>
+            <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 6 }}>{detail.rating}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.6 }}>{detail.note}</div>
+            {detail.upcoming && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#E4572E", borderRadius: 10, padding: "8px 10px", marginTop: 10 }}>
+                🚧 まだ開業していません。最新情報は公式サイトでご確認ください
+              </div>
+            )}
             {(detail.unverified || detail.userSubmitted) && (
               <div style={{ fontSize: 12, color: "#7A5C00", background: "#FBF3D5", borderRadius: 10, padding: "8px 10px", marginTop: 10 }}>
                 💡 {detail.userSubmitted ? "ユーザー投稿の情報です。利用条件は公式でご確認ください" : "ピックルボール利用の可否・条件は施設の公式情報でご確認ください"}
               </div>
             )}
-            <button style={S.btn(true)} onClick={() => outbound(detail)}>
-              {detail.live ? "公式サイトで予約する →" : "公式情報を見る →"}
+
+            {/* 混雑傾向（ピク活3件以上で自動表示） */}
+            {(() => {
+              const t = crowdTrend(pikOf(detail.id));
+              return t ? (
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.ink, background: "#EFF5EE", borderRadius: 10, padding: "8px 10px", marginTop: 10 }}>
+                  📊 混雑傾向: {t}
+                </div>
+              ) : null;
+            })()}
+
+            {/* プラン・料金 */}
+            <div style={{ marginTop: 14, fontSize: 12, fontWeight: 900, letterSpacing: "0.06em", color: "#5E716C" }}>プラン・料金</div>
+            {(detail.plans || []).map((p) => {
+              const k = KIND[p.kind];
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, padding: "10px 12px", border: `1.5px solid ${T.line}`, borderRadius: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: k.color, background: k.bg, borderRadius: 6, padding: "2px 6px" }}>{k.icon} {k.label}</span>
+                      <span style={{ fontWeight: 800, fontSize: 13 }}>{p.name}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: T.court, fontWeight: 800, marginTop: 3 }}>
+                      {planPrice(p)}<span style={{ color: "#8B9B96", fontWeight: 600 }}>{p.capacity ? ` ・ 定員〜${p.capacity}名` : ""}</span>
+                    </div>
+                  </div>
+                  <button style={{ flexShrink: 0, padding: "9px 13px", borderRadius: 10, border: "none", fontWeight: 800, fontSize: 12, background: T.court, color: "#fff", cursor: "pointer" }} onClick={() => outbound(detail)}>予約する →</button>
+                </div>
+              );
+            })}
+
+            <button style={{ ...S.btn(false), marginTop: 12 }} onClick={() => outbound(detail)}>
+              {detail.live ? "公式サイトを開く →" : "公式情報を見る →"}
             </button>
-            {detail.price.includes("※") && <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 8 }}>※料金は目安です</div>}
+
+            {/* ピク活 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 20 }}>
+              <div style={{ fontSize: 14, fontWeight: 900 }}>⚡ ピク活 <span style={{ color: "#8B9B96", fontWeight: 700, fontSize: 12 }}>{pikCount(detail.id)}件</span></div>
+              <button style={{ padding: "7px 13px", borderRadius: 999, border: "none", fontWeight: 800, fontSize: 12, background: T.ball, color: T.ballInk, cursor: "pointer" }} onClick={() => openPikForm(detail)}>⚡ ピク活を投稿</button>
+            </div>
+            {pikCount(detail.id) === 0 && (
+              <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 8 }}>まだピク活がありません。最初の記録を書こう⚡</div>
+            )}
+            {pikOf(detail.id).slice(0, detailPikLimit).map((k) => (
+              <PikCard key={k.id} k={k} onLike={() => likePik(k.id)} />
+            ))}
+            {pikCount(detail.id) > detailPikLimit && (
+              <button style={{ ...S.btn(false), marginTop: 8 }} onClick={() => setDetailPikLimit((n) => n + 5)}>もっと見る（残り{pikCount(detail.id) - detailPikLimit}件）</button>
+            )}
           </div>
         </>
       )}

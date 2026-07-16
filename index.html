@@ -27,6 +27,12 @@
     <meta name="twitter:image" content="https://pickleikitai.com/ogp.png" />
   </head>
   <body>
+    <!-- Netlify Forms 検出用のダミーフォーム（ビルド時に静的HTMLから検出される） -->
+    <form name="contact" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <textarea name="message"></textarea>
+    </form>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
