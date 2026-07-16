@@ -471,6 +471,9 @@ export default function PickleIkitai() {
   const [userFacs, setUserFacs] = useState([]);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
+  // 現在地（未取得なら池尻大橋を基準にする）
+  const [origin, setOrigin] = useState(HOME);
+  const [geoState, setGeoState] = useState("idle"); // idle | loading | granted | denied
   const [form, setForm] = useState({ name: "", area: "港区", cat: "public", indoor: "indoor", price: "", note: "", url: "" });
   const [pikkatsu, setPikkatsu] = useState(SEED_PIKKATSU);
   const [pikForm, setPikForm] = useState(null);
@@ -541,10 +544,10 @@ export default function PickleIkitai() {
   }, [areaFilter, userFacs, dayIdx]);
 
   const listFacs = useMemo(() => {
-    let arr = ALL_FACS.filter((f) => catFilter === "all" || f.cat === catFilter).map((f) => ({ ...f, km: dist(HOME, f) }));
+    let arr = ALL_FACS.filter((f) => catFilter === "all" || f.cat === catFilter).map((f) => ({ ...f, km: dist(origin, f) }));
     arr.sort((a, b) => (sortKey === "price" ? minCourtPrice(a) - minCourtPrice(b) : a.km - b.km));
     return arr;
-  }, [catFilter, sortKey, userFacs]);
+  }, [catFilter, sortKey, userFacs, origin]);
 
   // イベント/レッスンは全施設のplansから自動集計
   const eventPlans = useMemo(() => {
@@ -656,8 +659,29 @@ export default function PickleIkitai() {
     return ALL_FACS.filter((f) => {
       const hay = normalize([f.name, f.area, f.note, f.rating, ...(f.plans || []).map((p) => p.name)].join(" "));
       return hay.includes(q);
-    }).map((f) => ({ ...f, km: dist(HOME, f) })).sort((a, b) => a.km - b.km);
-  }, [submittedQuery, userFacs]);
+    }).map((f) => ({ ...f, km: dist(origin, f) })).sort((a, b) => a.km - b.km);
+  }, [submittedQuery, userFacs, origin]);
+
+  // 現在地を取得して基準点にする（失敗時は池尻大橋のまま）
+  const requestLocation = (onDone) => {
+    if (!navigator.geolocation) { setGeoState("denied"); showToast("この端末は位置情報に対応していません"); return; }
+    setGeoState("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoState("granted");
+        showToast("現在地から近い順に並べました📍");
+        onDone && onDone();
+      },
+      () => { setGeoState("denied"); showToast("位置情報が取得できませんでした（設定でご確認ください）"); },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  };
+  // 「近い順」タップ: 現在地が未取得なら取得してから並べる
+  const sortByDistance = () => {
+    setSortKey("dist");
+    if (geoState !== "granted") requestLocation();
+  };
 
   const doSearch = () => {
     const q = query.trim();
@@ -1001,8 +1025,17 @@ export default function PickleIkitai() {
             ))}
           </div>
           <div style={{ display: "flex", gap: 8, maxWidth: 360, margin: "10px auto 0" }}>
-            <button style={S.sortBtn(sortKey === "dist")} onClick={() => setSortKey("dist")}>📍 近い順</button>
+            <button style={S.sortBtn(sortKey === "dist")} onClick={sortByDistance}>
+              📍 近い順{geoState === "loading" ? "…" : ""}
+            </button>
             <button style={S.sortBtn(sortKey === "price")} onClick={() => setSortKey("price")}>💰 安い順</button>
+          </div>
+          <div style={{ textAlign: "center", fontSize: 11, color: "#8B9B96", marginTop: 8 }}>
+            {geoState === "granted"
+              ? <>📍 現在地から近い順で表示中 ・ <button onClick={() => { setOrigin(HOME); setGeoState("idle"); }} style={{ border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>解除</button></>
+              : geoState === "denied"
+              ? "位置情報が使えないため、池尻大橋を基準に表示しています"
+              : "「近い順」をタップすると現在地から並べ替えます"}
           </div>
 
           <div className="cardGrid">
@@ -1034,7 +1067,7 @@ export default function PickleIkitai() {
             ))}
           </div>
           <div style={{ fontSize: 11, color: "#AEBCB7", textAlign: "center", marginTop: 16 }}>
-            距離は池尻大橋起点の直線距離 ・ 現在 {ALL_FACS.length} コート掲載中
+            距離は{geoState === "granted" ? "現在地" : "池尻大橋"}起点の直線距離 ・ 現在 {ALL_FACS.length} コート掲載中
           </div>
         </div>
       </section>
@@ -1460,7 +1493,7 @@ export default function PickleIkitai() {
             </div>
             <div style={{ fontWeight: 900, fontSize: 19, marginTop: 6 }}>{detail.name}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 4 }}>
-              {detail.area} ・ <VenueTag indoor={detail.indoor} size={13} /> ・ 池尻大橋から約{dist(HOME, detail).toFixed(1)}km
+              {detail.area} ・ <VenueTag indoor={detail.indoor} size={13} /> ・ {geoState === "granted" ? "現在地" : "池尻大橋"}から約{dist(origin, detail).toFixed(1)}km
             </div>
             <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 6 }}>{detail.rating}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.6 }}>{detail.note}</div>
