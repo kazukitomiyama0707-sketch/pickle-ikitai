@@ -1,0 +1,9 @@
+{
+  "name": "pickleikitai-api",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute pickleikitai --remote --file=./schema.sql"
+  }
+}

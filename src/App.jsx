@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 
 /* ============================================================
    ピックルイキタイ MVP v8 — ワンページ版（コート写真つき）
@@ -7,17 +7,17 @@ import React, { useState, useMemo, useRef } from "react";
    ============================================================ */
 
 const T = {
-  bg: "#F4F7F2",
-  ink: "#0E2A2B",
-  court: "#166E73",
-  courtDeep: "#0C4A4E",
-  hero1: "#0A3E44",
-  hero2: "#12666E",
+  bg: "#F2FBF4",
+  ink: "#123536",
+  court: "#0E9E86",
+  courtDeep: "#0C7C74",
+  hero1: "#12A594",
+  hero2: "#2EC9A0",
   ball: "#D7F438",
-  ballInk: "#3A4A00",
-  line: "#E2E9E0",
+  ballInk: "#33430A",
+  line: "#DCEEE6",
   full: "#C6CFC9",
-  warn: "#E4572E",
+  warn: "#F2683C",
   white: "#FFFFFF",
 };
 const FONT = `-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif`;
@@ -73,7 +73,7 @@ const SEED_FACILITIES = [
   { id: "pacific", name: "Pacific PICKLE CLUB 有明", area: "江東区", lat: 35.6402, lng: 139.7873, indoor: false, live: true, cat: "dedicated", photo: "/photos/pacific.jpg", plans: [courtPlan("pacific", 7700, "¥7,700/h〜")], rating: "★3.8 (22)", url: "https://pacificpickleclub.com/", note: "有明アーバンスポーツパーク内2面・飲食併設" },
   { id: "sansan", name: "Sansanピックルボール 池袋", area: "豊島区", lat: 35.7282, lng: 139.7189, indoor: true, live: true, cat: "dedicated", photo: "/photos/sansan.jpg", plans: [courtPlan("sansan", 6000, "¥6,000/h〜")], rating: "★5.0 (2)", url: "https://sansan-pickleball.com/", note: "東池袋・サンソウゴビル・新規オープン" },
   { id: "shiomi", name: "SENKO塩見テニスセンター", area: "江東区", lat: 35.6579, lng: 139.8198, indoor: false, live: true, cat: "conv", plans: [courtPlan("shiomi", 4400, "¥4,400/h〜")], rating: "テニス転用", url: "https://reserve.tennisbear.net/", note: "テニスコートにテープで仮設・TennisBear予約" },
-  { id: "shibuya-pc", name: "shibuya pickleball club", area: "渋谷区", lat: 35.6632, lng: 139.6991, indoor: true, live: true, cat: "dedicated", plans: [courtPlan("shibuya-pc", 5500, "¥5,500/h〜")], rating: "新規", url: "https://shibuya-rental.space/", note: "宇田川町・レンタルスペース型" },
+  { id: "shibuya-pc", name: "SHIBUYA PICKLEBALL CLUB", area: "渋谷区", lat: 35.6632, lng: 139.6991, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("shibuya-pc", 5500, "¥5,500/h〜")], rating: "新規オープン", url: "https://shibuya-rental.space/", note: "宇田川町・レンタルスペース型", upcoming: true, openDate: "2026.08.01" },
   { id: "seibu", name: "SEIBU FAST SPORTS FIELD 品川", area: "港区", lat: 35.6276, lng: 139.7367, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("seibu", 7000, "要問合せ")], rating: "★4.3 (6)", url: gmaps("SEIBU FAST SPORTS FIELD 品川 ピックルボール"), note: "品川プリンスホテル10F・ゴルフ併設のインドアコート" },
   { id: "tebura", name: "手ぶらでピックルボール 有明店", area: "江東区", lat: 35.6351, lng: 139.7847, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("tebura", 3300, "低価格帯※")], rating: "★4.7 (3)", url: gmaps("手ぶらでピックルボール有明店"), note: "器材レンタル込・平日は当日予約可の声あり", cheap: true },
   { id: "tower", name: "Tokyo Tower Pickleball", area: "港区", lat: 35.6578, lng: 139.7449, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("tower", 9999, "要問合せ")], rating: "屋上コート", url: gmaps("Tokyo Tower Pickleball Friendship"), note: "東京タワー真下のルーフトップ・Instagram予約" },
@@ -109,12 +109,12 @@ const SEED_FACILITIES = [
     ], rating: "屋外4面", url: "https://www.cesame.co.jp/", note: "東久留米・アウトドア4面は都下最大級", cheap: true },
   { id: "tip-shibuya", name: "ティップ.クロス TOKYO 渋谷", area: "渋谷区", lat: 35.6595, lng: 139.7005, indoor: true, live: false, cat: "conv", plans: [
       { id: "tip-rental", name: "施設貸出（Aスタジオ）", kind: "court", price: 9900, unit: "回", capacity: null },
-    ], rating: "渋谷駅3分", url: "https://tip.tipness.co.jp/shop_info/SHP001/", note: "スタジオ貸出でピックル可・パドルレンタル¥550/本" },
+    ], rating: "渋谷駅3分", url: "https://tip.tipness.co.jp/shop_info/SHP001/", note: "スタジオ貸出でピックル可・パドルレンタル¥550/本", memberOnly: true },
   { id: "chuo-sports", name: "中央区立総合スポーツセンター", area: "中央区", lat: 35.6863, lng: 139.7889, indoor: true, live: false, cat: "public", plans: [courtPlan("chuo-sports", 500, "区施設料金※")], rating: "公共体育館", url: "https://www.chuo-sports.jp/personal/", note: "日本橋浜町・2026年1月からピックル教室開講・バドコート転用", cheap: true, unverified: true },
   { id: "picklr-toyosu", name: "PICKLR TOKYO 豊洲", area: "江東区", lat: 35.6533, lng: 139.7897, indoor: true, live: false, cat: "dedicated", plans: [
       { id: "picklr-play", name: "PLAY会員（月額）", kind: "court", price: 19800, unit: "月", capacity: null, label: "入会¥16,500＋¥19,800/月" },
       { id: "picklr-unlimited", name: "UNLIMITED会員（月額）", kind: "court", price: 29700, unit: "月", capacity: null, label: "入会¥27,500＋¥29,700/月" },
-    ], rating: "2026年秋オープン予定", url: "https://www.picklr.jp/locations/tokyo-toyosu", note: "塩浜・屋内7面の国内最大級・米PICKLR日本初上陸（開業前）", upcoming: true },
+    ], rating: "国内最大級・屋内7面", url: "https://www.picklr.jp/locations/tokyo-toyosu", note: "塩浜・屋内7面の国内最大級・米PICKLR日本初上陸", upcoming: true, openDate: "2026年秋" },
 ];
 
 /* 施設の詳細情報（分かっているものだけ）。access=最寄駅, hours=営業時間, amenities=設備 */
@@ -481,6 +481,12 @@ const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
         />
       )}
       <div style={{ position: "absolute", top: 6, right: 6, fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.82)", background: "rgba(8,28,30,0.42)", padding: "2px 6px", borderRadius: 6, letterSpacing: "0.04em" }}>イメージ</div>
+      {fac.upcoming && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(8,28,30,0.5)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
+          <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.18em", color: T.ball }}>🚧 OPEN予定</span>
+          {fac.openDate && <span style={{ fontSize: height > 100 ? 15 : 12, fontWeight: 900, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{fac.openDate}</span>}
+        </div>
+      )}
       {showBadge && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "24px 12px 9px", background: "linear-gradient(transparent, rgba(8,36,38,0.82))" }}>
           <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
@@ -523,6 +529,9 @@ export default function PickleIkitai() {
     try { return new Set(JSON.parse(localStorage.getItem("pk_ikitai") || "[]")); } catch { return new Set(); }
   });
   const [onlyIkitai, setOnlyIkitai] = useState(false);
+  const [venueFilter, setVenueFilter] = useState("all"); // all | indoor | outdoor
+  // 「ホーム画面に追加」誘導（一度閉じたら二度と出さない・スクロール後に控えめに）
+  const [a2hs, setA2hs] = useState(false);
   const [sheet, setSheet] = useState(null);
   const [detail, setDetail] = useState(null);
   const [toast, setToast] = useState(null);
@@ -544,6 +553,7 @@ export default function PickleIkitai() {
   });
   const [authView, setAuthView] = useState(null);
   const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
   const [contact, setContact] = useState({ name: "", email: "", message: "", sent: false });
   const timers = useRef([]);
   const idRef = useRef(1);
@@ -606,11 +616,12 @@ export default function PickleIkitai() {
   const listFacs = useMemo(() => {
     let arr = ALL_FACS
       .filter((f) => catFilter === "all" || f.cat === catFilter)
+      .filter((f) => venueFilter === "all" || (venueFilter === "indoor" ? f.indoor : !f.indoor))
       .filter((f) => !onlyIkitai || ikitai.has(f.id))
       .map((f) => ({ ...f, km: dist(origin, f) }));
     arr.sort((a, b) => (sortKey === "price" ? minCourtPrice(a) - minCourtPrice(b) : a.km - b.km));
     return arr;
-  }, [catFilter, sortKey, userFacs, origin, onlyIkitai, ikitai]);
+  }, [catFilter, sortKey, userFacs, origin, onlyIkitai, ikitai, venueFilter]);
 
   // イベント/レッスンは全施設のplansから自動集計
   const eventPlans = useMemo(() => {
@@ -671,6 +682,19 @@ export default function PickleIkitai() {
     });
   };
   const ikitaiCount = ikitai.size;
+
+  // ホーム画面追加バナー: 既にPWA起動 or 過去に閉じた場合は出さない。少しスクロールしたら1回だけ
+  useEffect(() => {
+    if (localStorage.getItem("pk_a2hs_dismissed")) return;
+    const standalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone;
+    if (standalone) return;
+    const onScroll = () => {
+      if (window.scrollY > 700) { setA2hs(true); window.removeEventListener("scroll", onScroll); }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const dismissA2hs = () => { setA2hs(false); localStorage.setItem("pk_a2hs_dismissed", "1"); };
 
   const doAuth = () => {
     const n = sanitizeText(authName).trim().slice(0, 20);
@@ -912,8 +936,26 @@ export default function PickleIkitai() {
 
       {toast && <div style={S.toast}>📣 {toast}</div>}
 
+      {/* ホーム画面に追加の控えめな誘導（下部・1回のみ・閉じたら二度と出ない） */}
+      {a2hs && (
+        <div style={{ position: "fixed", left: 12, right: 12, bottom: 14, maxWidth: 460, margin: "0 auto", zIndex: 90, background: "#fff", borderRadius: 16, boxShadow: "0 8px 30px rgba(14,42,43,0.28)", border: `1.5px solid ${T.line}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: T.hero1, display: "grid", placeItems: "center" }}>
+            <Ball size={22} />
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontWeight: 900, fontSize: 13 }}>ホーム画面に追加すると快適</div>
+            <div style={{ fontSize: 11, color: "#5E716C", marginTop: 2, lineHeight: 1.5 }}>
+              {/iPhone|iPad|iPod/.test(navigator.userAgent)
+                ? "共有ボタン → 「ホーム画面に追加」でアプリのように使えます"
+                : "ブラウザのメニュー →「ホーム画面に追加」でアプリのように使えます"}
+            </div>
+          </div>
+          <button onClick={dismissA2hs} style={{ flexShrink: 0, border: "none", background: "#EFF2EF", color: T.ink, borderRadius: 999, width: 28, height: 28, fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: FONT }}>×</button>
+        </div>
+      )}
+
       {/* ==================== ナビ（sticky） ==================== */}
-      <div className="lpNav stickyNav" style={{ background: T.hero1, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px clamp(14px, 4vw, 40px)", gap: 10 }}>
+      <div className="lpNav stickyNav" style={{ background: T.courtDeep, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px clamp(14px, 4vw, 40px)", gap: 10 }}>
         <div className="lpNavLinks" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
           <a onClick={() => scrollTo(refAbout)}>ピックルイキタイとは</a>
           <a onClick={() => scrollTo(refRank)}>ランキング</a>
@@ -943,7 +985,7 @@ export default function PickleIkitai() {
       </div>
 
       {/* ==================== HERO ==================== */}
-      <div style={{ background: `linear-gradient(160deg, ${T.hero1} 0%, ${T.hero2} 55%, ${T.hero1} 100%)`, color: "#fff", position: "relative", overflow: "hidden", minHeight: "88vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px 56px" }}>
+      <div style={{ background: `linear-gradient(155deg, ${T.hero2} 0%, ${T.hero1} 50%, ${T.courtDeep} 100%)`, color: "#fff", position: "relative", overflow: "hidden", minHeight: "88vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px 56px" }}>
         <CourtPattern />
         <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div className="lpTagline" style={{ fontWeight: 800, marginBottom: "clamp(20px, 4vh, 36px)", textAlign: "center", textShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>
@@ -1027,7 +1069,8 @@ export default function PickleIkitai() {
                         <CatBadge cat={f.cat} />
                         {f.userSubmitted && <UserBadge />}
                         {!hasCourt(f) && <span style={{ fontSize: 10, fontWeight: 800, color: "#8A4B2D", background: "#F9EBE2", borderRadius: 6, padding: "2px 6px" }}>体験会のみ</span>}
-                        {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>開業前</span>}
+                        {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>🚧 {f.openDate ? f.openDate + "オープン" : "開業前"}</span>}
+                        {f.memberOnly && <span style={{ fontSize: 10, fontWeight: 800, color: "#5B5B8A", background: "#ECECF7", borderRadius: 6, padding: "2px 6px" }}>会員限定</span>}
                         {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
                         {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
                       </div>
@@ -1182,6 +1225,11 @@ export default function PickleIkitai() {
             </button>
             <button style={S.sortBtn(sortKey === "price")} onClick={() => setSortKey("price")}>💰 安い順</button>
           </div>
+          <div style={{ display: "flex", gap: 8, maxWidth: 360, margin: "8px auto 0" }}>
+            {[["all", "すべて"], ["indoor", "🏠 屋内"], ["outdoor", "☀️ 屋外"]].map(([k, label]) => (
+              <button key={k} style={S.sortBtn(venueFilter === k)} onClick={() => setVenueFilter(k)}>{label}</button>
+            ))}
+          </div>
           <div style={{ textAlign: "center", fontSize: 11, color: "#8B9B96", marginTop: 8 }}>
             {geoState === "granted"
               ? <>📍 現在地から近い順で表示中 ・ <button onClick={() => { setOrigin(HOME); setGeoState("idle"); }} style={{ border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>解除</button></>
@@ -1219,7 +1267,8 @@ export default function PickleIkitai() {
                     <CatBadge cat={f.cat} />
                     {f.userSubmitted && <UserBadge />}
                     {!hasCourt(f) && <span style={{ fontSize: 10, fontWeight: 800, color: "#8A4B2D", background: "#F9EBE2", borderRadius: 6, padding: "2px 6px" }}>体験会のみ</span>}
-                    {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>開業前</span>}
+                    {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>🚧 {f.openDate ? f.openDate + "オープン" : "開業前"}</span>}
+                        {f.memberOnly && <span style={{ fontSize: 10, fontWeight: 800, color: "#5B5B8A", background: "#ECECF7", borderRadius: 6, padding: "2px 6px" }}>会員限定</span>}
                     {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
                     {f.live && <span style={{ fontSize: 10, fontWeight: 800, color: T.court, border: `1px solid ${T.court}`, borderRadius: 6, padding: "1px 5px" }}>空き枠表示</span>}
                     {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
@@ -1673,7 +1722,7 @@ export default function PickleIkitai() {
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.6 }}>{detail.note}</div>
             {detail.upcoming && (
               <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#E4572E", borderRadius: 10, padding: "8px 10px", marginTop: 10 }}>
-                🚧 まだ開業していません。最新情報は公式サイトでご確認ください
+                🚧 {detail.openDate ? `${detail.openDate}オープン予定` : "開業前"}・まだ利用できません。最新情報は公式サイトで
               </div>
             )}
             {(detail.unverified || detail.userSubmitted) && (
