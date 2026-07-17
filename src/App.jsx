@@ -115,6 +115,46 @@ const SEED_FACILITIES = [
       { id: "picklr-play", name: "PLAY会員（月額）", kind: "court", price: 19800, unit: "月", capacity: null, label: "入会¥16,500＋¥19,800/月" },
       { id: "picklr-unlimited", name: "UNLIMITED会員（月額）", kind: "court", price: 29700, unit: "月", capacity: null, label: "入会¥27,500＋¥29,700/月" },
     ], rating: "国内最大級・屋内7面", url: "https://www.picklr.jp/locations/tokyo-toyosu", note: "塩浜・屋内7面の国内最大級・米PICKLR日本初上陸", upcoming: true, openDate: "2026年秋" },
+
+  /* ==== 全国のコート（2026-07 調査で確認・確度高い専用/リゾート） ==== */
+  // --- 関東（東京以外） ---
+  { id: "ocean-tsurumi", name: "OCEAN PICKLE CLUB 鶴見", area: "神奈川県", lat: 35.51, lng: 139.68, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("ocean-tsurumi", 4000, "¥4,000/h〜")], rating: "屋外ハード2面", url: "https://www.oceangp.com/about/sports/", note: "横浜市鶴見・デコターフ2面・用具レンタル可" },
+  { id: "raym-kawaguchi", name: "レイムテニスセンター", area: "埼玉県", lat: 35.83, lng: 139.72, indoor: false, live: false, cat: "conv", plans: [courtPlan("raym-kawaguchi", 4400, "¥4,400/h〜")], rating: "屋外2面", url: "https://raym.tsjpn.com/pickleball/", note: "川口市・ハードコート2面・毎週金曜講習会" },
+  { id: "bellwood-matsudo", name: "ベルウッドテニスガーデン", area: "千葉県", lat: 35.79, lng: 139.94, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("bellwood-matsudo", 2200, "¥2,200〜")], rating: "屋外専用2面", url: "https://pickle-one.com/court/chiba/matsudo/bell-wood/", note: "松戸市・2025年専用コート完成・東松戸駅" },
+  { id: "impact-tsukuba", name: "IMPACTつくばピックルボールクラブ", area: "茨城県", lat: 36.08, lng: 140.11, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("impact-tsukuba", 1650, "平日¥1,650〜")], rating: "屋外4面", url: "https://impact-tsukubapickleball-club.square.site/", note: "つくば市・県内初の本格専用4面・2025年6月オープン", cheap: true },
+  { id: "maebashi-pc", name: "前橋ピックルボールセンター", area: "群馬県", lat: 36.32, lng: 139.00, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("maebashi-pc", 3300, "平日¥3,300〜")], rating: "屋内3面", url: "https://goldsgym.jp/news/27874", note: "高崎市・県内初の専用3面・2024年8月オープン" },
+  { id: "prex-tochigi", name: "P-REX（ピーレックス）", area: "栃木県", lat: 36.68, lng: 139.96, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("prex-tochigi", 2200, "要問合せ")], rating: "屋外専用", url: "https://prex-tk.com/", note: "さくら市・日本初の専用屋外コート（2021年）・スクール運営" },
+
+  // --- 関西 ---
+  { id: "dpc-kobe", name: "DIADEM PICKLEBALL KOBE", area: "兵庫県", lat: 34.65, lng: 135.14, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("dpc-kobe", 4400, "¥4,400/h")], rating: "屋内5面", url: "https://dpckobe.jp/", note: "神戸市長田・日本最大級5面・米DIADEM提携・新長田駅近" },
+  { id: "pb-base-osaka", name: "Pickleball Base Osaka", area: "大阪府", lat: 34.58, lng: 135.44, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("pb-base-osaka", 3000, "平日¥3,000〜")], rating: "屋外6面", url: "https://www.pickleballosaka.online/", note: "堺市・西日本最多6面・国際基準・南海堺駅直結" },
+  { id: "pb-one-osaka", name: "ピックルボールワン大阪", area: "大阪府", lat: 34.75, lng: 135.55, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("pb-one-osaka", 1000, "¥1,000/h")], rating: "屋内", url: "https://pickle-one.com/court/osaka/", note: "大阪市東淀川・平日半額キャンペーンあり", cheap: true },
+  { id: "kyoto-ptc", name: "京都ピックルボールトレーニングセンター", area: "京都府", lat: 34.93, lng: 135.72, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("kyoto-ptc", 2750, "会員¥2,750〜")], rating: "屋内4面", url: "https://navi.play-pickleball.jp/", note: "京都市伏見・4面DECOターフ・会員は用具無料レンタル" },
+
+  // --- 中部 ---
+  { id: "sasashima", name: "SASASHIMA PICKLEBALL CLUB", area: "愛知県", lat: 35.16, lng: 136.88, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("sasashima", 3000, "要問合せ")], rating: "名古屋初の屋外専用", url: "https://pickle-one.com/court/aichi/", note: "名古屋市中川・名古屋初の屋外専用コート・2026年6月オープン" },
+  { id: "nagoya-pb-base", name: "Nagoya Pickleball Base", area: "愛知県", lat: 35.17, lng: 136.90, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("nagoya-pb-base", 3000, "要問合せ")], rating: "屋内専用", url: "https://navi.play-pickleball.jp/", note: "名古屋の専用インドアコート" },
+  { id: "marin-handa", name: "マリンピックルボールクラブ", area: "愛知県", lat: 34.89, lng: 136.93, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("marin-handa", 3000, "要問合せ")], rating: "愛知県初の屋外専用", url: "https://prtimes.jp/main/html/rd/p/000000004.000179964.html", note: "半田市・愛知県初の専用アウトドア・2026年6月オープン" },
+
+  // --- 中国・四国・九州 ---
+  { id: "pivole-fukuoka", name: "ピヴォーレ福岡", area: "福岡県", lat: 33.65, lng: 130.44, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("pivole-fukuoka", 3000, "要問合せ")], rating: "九州初の屋内専用4面", url: "https://www.pivole.com/", note: "福岡市東・九州初の屋内専用・ソフトコート最大4面・シャワー完備" },
+  { id: "tagawa-tc", name: "田川テニスクラブ ピックルボール専用コート", area: "福岡県", lat: 33.67, lng: 130.86, indoor: false, live: false, cat: "dedicated", plans: [courtPlan("tagawa-tc", 2200, "¥2,200/h")], rating: "九州初の屋外専用4面", url: "https://navi.play-pickleball.jp/", note: "田川郡香春・ハードコート4面常設・2025年" },
+  { id: "pb-kumamoto", name: "ピックルボールくまもと", area: "熊本県", lat: 32.66, lng: 130.68, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("pb-kumamoto", 500, "¥500/h")], rating: "屋内1面・喫茶併設", url: "https://reserva.be/pickleball55kumamoto", note: "宇城市・県内初の専用レンタルコート", cheap: true },
+  { id: "nfl-tokushima", name: "NFL末広体育館", area: "徳島県", lat: 34.07, lng: 134.57, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("nfl-tokushima", 2200, "1面¥2,200/h")], rating: "屋内4面", url: "https://nfl.works/pickleball/", note: "徳島市・徳島初の専用4面・2026年4月本開業・初回無料体験" },
+  { id: "jiyu-marugame", name: "自遊空間 丸亀川西店", area: "香川県", lat: 34.30, lng: 133.80, indoor: true, live: false, cat: "dedicated", plans: [courtPlan("jiyu-marugame", 1120, "パック料金")], rating: "屋内常設", url: "https://jiqoo.jp/shop/9931650/", note: "丸亀市・ネットカフェ内の常設コート・2024年5月", cheap: true },
+
+  // --- 北海道 ---
+  { id: "neo-sapporo", name: "PLACE OF SPORTS NEO", area: "北海道", lat: 43.05, lng: 141.42, indoor: true, live: false, cat: "conv", plans: [courtPlan("neo-sapporo", 2000, "時間帯変動")], rating: "屋内6-8面・24時間", url: "https://neo-spo.com/", note: "札幌市白石・24時間利用可・通年・教室/大会あり" },
+
+  // --- 旅先・リゾート（ホテル/温泉/リゾート併設） ---
+  { id: "tokyu-hamanako", name: "東急リゾートタウン浜名湖", area: "静岡県", lat: 34.76, lng: 137.55, indoor: false, live: false, cat: "trip", plans: [courtPlan("tokyu-hamanako", 2200, "¥2,200/h")], rating: "USA公認4面", url: "https://www.tokyu-resort.co.jp/", note: "浜松市・USA Pickleball公認4面・リゾート内", resort: true },
+  { id: "tokyu-tateshina", name: "東急リゾートタウン蓼科", area: "長野県", lat: 36.10, lng: 138.30, indoor: false, live: false, cat: "trip", plans: [courtPlan("tokyu-tateshina", 4000, "¥4,000/h")], rating: "USA公認2面", url: "https://www.tokyu-resort.co.jp/", note: "茅野市・甲信越初のUSA Pickleball公認2面", resort: true },
+  { id: "pica-fujiyama", name: "PICA Fujiyama", area: "山梨県", lat: 35.48, lng: 138.77, indoor: false, live: false, cat: "trip", plans: [courtPlan("pica-fujiyama", 3000, "要問合せ")], rating: "全天候型", url: "https://www.pica-resort.jp/", note: "富士河口湖・東日本初の全天候型コート・2025年8月オープン", resort: true },
+  { id: "nemu-resort", name: "NEMU RESORT", area: "三重県", lat: 34.30, lng: 136.79, indoor: false, live: false, cat: "trip", plans: [courtPlan("nemu-resort", 3000, "要問合せ")], rating: "リゾート内", url: "https://www.nemuresort.com/", note: "志摩市・伊勢志摩国立公園内・2026年4月オープン", resort: true },
+  { id: "rusutsu", name: "ルスツリゾート ピックルボールコート", area: "北海道", lat: 42.74, lng: 140.90, indoor: false, live: false, cat: "trip", plans: [courtPlan("rusutsu", 3000, "¥3,000/h")], rating: "PJF公認8面", url: "https://rusutsu.com/summer-activities/pickleball/", note: "留寿都村・道内初の専用8面・観覧席あり（夏季営業）", resort: true },
+  { id: "asarigawa", name: "朝里川温泉ホテル ピックルボールコート", area: "北海道", lat: 43.13, lng: 141.05, indoor: false, live: false, cat: "trip", plans: [courtPlan("asarigawa", 3000, "¥3,000/h（宿泊者無料）")], rating: "ホテル併設1面", url: "https://asarigawaonsenhotel.com/", note: "小樽市・温泉ホテル併設・宿泊者は1h無料・完全予約制", resort: true },
+  { id: "halekulani-okinawa", name: "ハレクラニ沖縄", area: "沖縄県", lat: 26.43, lng: 127.80, indoor: false, live: false, cat: "trip", plans: [courtPlan("halekulani-okinawa", 5100, "¥5,100/h")], rating: "宿泊者限定", url: "https://www.okinawa.halekulani.com/activity/100/", note: "恩納村・ラグジュアリーリゾート・宿泊者限定・2024年6月", resort: true },
+  { id: "nagasaki-stadium", name: "長崎スタジアムシティ ピックルボールコート", area: "長崎県", lat: 32.76, lng: 129.86, indoor: false, live: false, cat: "trip", plans: [courtPlan("nagasaki-stadium", 500, "平日¥500〜")], rating: "屋外5面・屋上", url: "https://www.nagasakistadiumcity.com/activity/pickleball/", note: "長崎市・HAPPINESS ARENA屋上5面・年中無休・アプリ予約", resort: true, cheap: true },
 ];
 
 /* 施設の詳細情報（分かっているものだけ）。access=最寄駅, hours=営業時間, amenities=設備 */
@@ -159,7 +199,7 @@ const CATS = [
   { key: "dedicated", label: "専用コート" },
   { key: "public", label: "公共・格安" },
   { key: "conv", label: "テニス転用" },
-  { key: "trip", label: "遠征OK" },
+  { key: "trip", label: "🏝 旅先・リゾート" },
 ];
 
 const AREA_COORDS = {
@@ -573,9 +613,11 @@ export default function PickleIkitai() {
   const scrollTo = (r) => r.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const ALL_FACS = useMemo(() => [...SEED_FACILITIES, ...userFacs], [userFacs]);
-  const areas = ["all", ...new Set(ALL_FACS.filter((f) => f.cat !== "trip").map((f) => f.area))];
+  // 空き枠グリッドはリアルタイムデータのある稼働コート（＝東京）に限定
+  const areas = ["all", ...new Set(ALL_FACS.filter((f) => f.live).map((f) => f.area))];
   // 開業前(upcoming)の施設は空き枠グリッドの集計対象から除外（誤情報防止）
-  const visibleFacs = ALL_FACS.filter((f) => !f.upcoming && (areaFilter === "all" || f.area === areaFilter));
+  // 空き枠は稼働コート（live）のみ。開業前・全国の未連携コートは対象外
+  const visibleFacs = ALL_FACS.filter((f) => f.live && (areaFilter === "all" || f.area === areaFilter));
 
   const windowDays = ALL_DAYS.slice(winStart, winStart + 3);
   const selDay = ALL_DAYS[dayIdx] || ALL_DAYS[0];
@@ -989,7 +1031,7 @@ export default function PickleIkitai() {
         <CourtPattern />
         <div style={{ position: "relative", zIndex: 2, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div className="lpTagline" style={{ fontWeight: 800, marginBottom: "clamp(20px, 4vh, 36px)", textAlign: "center", textShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>
-            東京のピックルボールコートがぜんぶ見つかる横断検索サイト
+            全国のピックルボールコートがぜんぶ見つかる横断検索サイト
           </div>
 
           <Logo big />
@@ -1098,7 +1140,7 @@ export default function PickleIkitai() {
           <p style={{ textAlign: "center", fontSize: 14, lineHeight: 2, color: "#455B57", maxWidth: 640, margin: "10px auto 0" }}>
             「今週末ピックルやりたい」のに、どこでできるか分からない。<br className="hideMobile" />
             公式サイトを5個も6個も見て回って、結局予定が流れる——。<br className="hideMobile" />
-            ピックルイキタイは、東京+関東のコートの空き枠をひとつの画面に集めた横断検索ポータルです。予約は各コートの公式サイトで。
+            ピックルイキタイは、全国のコートを距離順・料金順でまとめて探せる横断検索ポータルです。予約は各コートの公式サイトで。
           </p>
           <div className="aboutGrid">
             {[
