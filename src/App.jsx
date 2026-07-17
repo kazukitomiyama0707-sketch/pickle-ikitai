@@ -590,6 +590,8 @@ export default function PickleIkitai() {
   const [pikForm, setPikForm] = useState(null);
   const [pikPicker, setPikPicker] = useState(false); // 施設を選んでピク活投稿
   const [pikPickerQ, setPikPickerQ] = useState("");
+  const [profileEdit, setProfileEdit] = useState(null); // プロフ編集フォーム（開いてる時オブジェクト）
+  const [savingProfile, setSavingProfile] = useState(false);
   const [detailPikLimit, setDetailPikLimit] = useState(3);
   const [legalView, setLegalView] = useState(null);
   // 認証: 現状はブラウザ内の暫定アカウント。LINEログイン(OAuth)+D1が通ったら差し替える
@@ -788,6 +790,31 @@ export default function PickleIkitai() {
   }, []);
 
   const authToken = () => localStorage.getItem("pk_jwt");
+
+  const openProfileEdit = () => setProfileEdit({
+    name: user?.name || "", bio: user?.bio || "", avatar: user?.avatar || "", avatarFile: null,
+    x: user?.links?.x || "", instagram: user?.links?.instagram || "", tiktok: user?.links?.tiktok || "", web: user?.links?.web || "",
+  });
+  const saveProfile = async () => {
+    const token = authToken();
+    if (!token) { showToast("ログインが必要です"); return; }
+    const p = profileEdit;
+    if (!p.name.trim()) { showToast("名前を入力してください"); return; }
+    setSavingProfile(true);
+    const fd = new FormData();
+    fd.append("name", p.name); fd.append("bio", p.bio);
+    fd.append("link_x", p.x); fd.append("link_instagram", p.instagram); fd.append("link_tiktok", p.tiktok); fd.append("link_web", p.web);
+    if (p.avatarFile) fd.append("avatar", p.avatarFile);
+    try {
+      const res = await fetch(`${API_BASE}/api/profile`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const d = await res.json();
+      if (!res.ok) { showToast(d.error || "保存に失敗しました"); setSavingProfile(false); return; }
+      const u = { ...d.user, line: true };
+      setUser(u); localStorage.setItem("pk_user", JSON.stringify(u));
+      setProfileEdit(null); showToast("プロフィールを更新しました");
+    } catch { showToast("通信に失敗しました"); }
+    setSavingProfile(false);
+  };
 
   const doAuth = () => {
     const n = sanitizeText(authName).trim().slice(0, 20);
@@ -1694,17 +1721,62 @@ export default function PickleIkitai() {
           <div style={{ ...S.sheet, zIndex: 110, maxWidth: 420 }}>
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 16px" }} />
 
-            {authView === "account" ? (
-              <div style={{ textAlign: "center", paddingBottom: 6 }}>
-                <div style={{ width: 62, height: 62, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 26, display: "grid", placeItems: "center", margin: "0 auto" }}>{user?.name.slice(0, 1)}</div>
-                <div style={{ fontWeight: 900, fontSize: 18, marginTop: 10 }}>{user?.name}</div>
-                <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 4 }}>
-                  ⚡ ピク活 {pikkatsu.filter((p) => p.nickname === user?.name).length}件
+            {authView === "account" ? (() => {
+              const mine = pikkatsu.filter((p) => p.nickname === user?.name);
+              const courtN = new Set(mine.map((p) => p.facilityId)).size;
+              const totalLikes = mine.reduce((n, p) => n + (p.likes || 0), 0);
+              const links = user?.links || {};
+              const linkList = [
+                links.x && { label: "X", url: links.x, icon: "𝕏" },
+                links.instagram && { label: "Instagram", url: links.instagram, icon: "📷" },
+                links.tiktok && { label: "TikTok", url: links.tiktok, icon: "🎵" },
+                links.web && { label: "Web", url: links.web, icon: "🔗" },
+              ].filter(Boolean);
+              return (
+                <div style={{ paddingBottom: 6 }}>
+                  {/* プロフィール */}
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    {user?.avatar
+                      ? <img src={user.avatar} alt="" style={{ width: 68, height: 68, borderRadius: 999, objectFit: "cover", flexShrink: 0 }} />
+                      : <div style={{ width: 68, height: 68, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 28, display: "grid", placeItems: "center", flexShrink: 0 }}>{user?.name?.slice(0, 1)}</div>}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 900, fontSize: 19 }}>{user?.name}</div>
+                      {user?.bio && <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{user.bio}</div>}
+                    </div>
+                  </div>
+                  {/* SNSリンク */}
+                  {linkList.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                      {linkList.map((l) => (
+                        <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 800, color: T.ink, background: "#EFF5EE", borderRadius: 999, padding: "5px 12px", textDecoration: "none" }}>
+                          <span>{l.icon}</span>{l.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {/* 統計 */}
+                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    {[["ピク活", mine.length], ["コート", courtN], ["⚡もらった", totalLikes]].map(([k, v]) => (
+                      <div key={k} style={{ flex: 1, textAlign: "center", background: "#F1F4F0", borderRadius: 12, padding: "10px 0" }}>
+                        <div style={{ fontWeight: 900, fontSize: 18, color: T.court }}>{v}</div>
+                        <div style={{ fontSize: 10, color: "#8B9B96", marginTop: 1 }}>{k}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <button style={{ ...S.btn(true), marginTop: 0, flex: 1 }} onClick={openProfileEdit}>プロフィールを編集</button>
+                    <button style={{ ...S.btn(false), marginTop: 0, width: 96 }} onClick={() => { localStorage.removeItem("pk_user"); localStorage.removeItem("pk_jwt"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
+                  </div>
+
+                  {/* 自分のピク活タイムライン */}
+                  <div style={{ fontWeight: 900, fontSize: 14, marginTop: 22 }}>自分のピク活 <span style={{ color: "#8B9B96", fontWeight: 700, fontSize: 12 }}>{mine.length}件</span></div>
+                  {mine.length === 0
+                    ? <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 8 }}>まだピク活がありません。コートで打ったら記録しよう⚡</div>
+                    : mine.map((k) => { const f = facById(k.facilityId); return <PikCard key={k.id} k={k} facName={f ? f.name : ""} onFac={() => { setAuthView(null); f && openDetail(f); }} onLike={() => likePik(k.id)} />; })}
                 </div>
-                <button style={{ ...S.btn(false), marginTop: 18 }} onClick={() => { localStorage.removeItem("pk_user"); localStorage.removeItem("pk_jwt"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
-                <button style={S.btn(false)} onClick={() => setAuthView(null)}>閉じる</button>
-              </div>
-            ) : (
+              );
+            })() : (
               <>
                 <div style={{ transform: "scale(0.62)", transformOrigin: "center", marginBottom: -18, marginTop: -10 }}>
                   <div style={{ background: T.hero1, borderRadius: 20, padding: "18px 0 22px" }}><Logo /></div>
@@ -1772,6 +1844,46 @@ export default function PickleIkitai() {
               {CONTACT_EMAIL}
             </div>
             <button style={{ ...S.btn(true), marginTop: 18 }} onClick={() => setLegalView(null)}>閉じる</button>
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: プロフィール編集 ==================== */}
+      {profileEdit && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 115 }} onClick={() => setProfileEdit(null)} />
+          <div style={{ ...S.sheet, zIndex: 125, maxWidth: 440 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 14px" }} />
+            <div style={{ fontWeight: 900, fontSize: 17 }}>プロフィールを編集</div>
+
+            <label style={{ ...S.label, marginTop: 16 }}>プロフィール画像</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 6 }}>
+              {profileEdit.avatar
+                ? <img src={profileEdit.avatar} alt="" style={{ width: 64, height: 64, borderRadius: 999, objectFit: "cover" }} />
+                : <div style={{ width: 64, height: 64, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 26, display: "grid", placeItems: "center" }}>{(profileEdit.name || "?").slice(0, 1)}</div>}
+              <label style={{ fontSize: 13, fontWeight: 800, color: T.court, cursor: "pointer" }}>
+                画像を選ぶ
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  if (file.size > 6 * 1024 * 1024) { showToast("画像は6MBまでです"); return; }
+                  setProfileEdit((p) => ({ ...p, avatarFile: file, avatar: URL.createObjectURL(file) }));
+                }} />
+              </label>
+            </div>
+
+            <label style={S.label}>名前 *</label>
+            <input style={S.input} maxLength={20} value={profileEdit.name} onChange={(e) => setProfileEdit({ ...profileEdit, name: e.target.value })} />
+
+            <label style={S.label}>自己紹介</label>
+            <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} maxLength={160} placeholder="ピックル歴・好きなプレースタイルなど" value={profileEdit.bio} onChange={(e) => setProfileEdit({ ...profileEdit, bio: e.target.value })} />
+
+            <label style={S.label}>SNS・リンク（プロフから飛べます）</label>
+            {[["x", "X（旧Twitter）", "https://x.com/..."], ["instagram", "Instagram", "https://instagram.com/..."], ["tiktok", "TikTok", "https://tiktok.com/@..."], ["web", "Webサイト", "https://..."]].map(([k, label, ph]) => (
+              <input key={k} style={{ ...S.input, marginTop: 6 }} placeholder={`${label}: ${ph}`} value={profileEdit[k]} onChange={(e) => setProfileEdit({ ...profileEdit, [k]: e.target.value })} />
+            ))}
+
+            <button style={{ ...S.btn(true), marginTop: 18 }} disabled={savingProfile} onClick={saveProfile}>{savingProfile ? "保存中…" : "保存する"}</button>
+            <button style={S.btn(false)} onClick={() => setProfileEdit(null)}>キャンセル</button>
           </div>
         </>
       )}
