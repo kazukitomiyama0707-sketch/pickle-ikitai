@@ -117,6 +117,43 @@ const SEED_FACILITIES = [
     ], rating: "2026年秋オープン予定", url: "https://www.picklr.jp/locations/tokyo-toyosu", note: "塩浜・屋内7面の国内最大級・米PICKLR日本初上陸（開業前）", upcoming: true },
 ];
 
+/* 施設の詳細情報（分かっているものだけ）。access=最寄駅, hours=営業時間, amenities=設備 */
+const FAC_META = {
+  pickle9:      { access: "表参道駅 徒歩5分", hours: "9:00–22:00", amenities: ["indoor", "rental", "shower", "shop"] },
+  one:          { access: "新橋駅 徒歩5分 / 銀座駅 徒歩7分", hours: "6:00–23:00", amenities: ["indoor", "rental", "shop", "lesson"] },
+  pacific:      { access: "有明テニスの森駅 徒歩8分", hours: "9:00–22:00", amenities: ["outdoor", "rental", "food"] },
+  sansan:       { access: "東池袋駅 徒歩3分", hours: "9:00–23:00", amenities: ["indoor", "rental", "lesson"] },
+  "shibuya-pc": { access: "渋谷駅 徒歩7分（宇田川町）", hours: "10:00–22:00", amenities: ["indoor", "rental"] },
+  shiomi:       { access: "潮見駅 徒歩10分", hours: "7:00–23:00", amenities: ["outdoor", "rental"] },
+  seibu:        { access: "品川駅 徒歩3分（プリンスホテル10F）", hours: "要問合せ", amenities: ["indoor", "rental", "shower"] },
+  tebura:       { access: "国際展示場駅 徒歩8分", hours: "10:00–22:00", amenities: ["indoor", "rental", "lesson"] },
+  tower:        { access: "赤羽橋駅 徒歩5分", hours: "要問合せ", amenities: ["outdoor", "rental"] },
+  "ariake-park":{ access: "有明テニスの森駅 徒歩7分", hours: "9:00–21:00（ナイター可）", amenities: ["outdoor", "parking"] },
+  "shibuya-sc": { access: "渋谷駅 徒歩15分", hours: "9:00–22:00", amenities: ["indoor", "parking"] },
+  cosmic:       { access: "飯田橋駅 徒歩8分", hours: "9:00–21:30", amenities: ["indoor"] },
+  nakano:       { access: "鷺ノ宮駅 徒歩10分", hours: "9:00–22:00", amenities: ["indoor", "parking"] },
+  omori:        { access: "大森駅 徒歩12分", hours: "9:00–22:00", amenities: ["indoor", "shower", "parking"] },
+  katsushika:   { access: "金町駅 バス", hours: "要問合せ", amenities: ["outdoor", "rental", "parking"] },
+  kawagoe:      { access: "笠幡駅 徒歩 / 関越自動車道", hours: "–22:30", amenities: ["outdoor", "parking"] },
+  "vip-toyocho":{ access: "東陽町駅 徒歩5分", hours: "9:00–23:00", amenities: ["indoor", "rental", "lesson"] },
+  "meiji-park": { access: "国立競技場駅 徒歩3分", hours: "9:00–21:00", amenities: ["outdoor", "rental", "lesson"] },
+  hilton:       { access: "西新宿駅 徒歩3分 / 新宿駅 徒歩10分", hours: "平日 –22:00", amenities: ["outdoor", "rental", "shower", "lesson"] },
+  cesame:       { access: "東久留米駅 徒歩 / 駐車場あり", hours: "要問合せ", amenities: ["outdoor", "rental", "parking", "lesson"] },
+  "tip-shibuya":{ access: "渋谷駅 徒歩3分", hours: "施設営業時間内", amenities: ["indoor", "rental", "shower"] },
+  "chuo-sports":{ access: "浜町駅 徒歩5分", hours: "9:00–22:00", amenities: ["indoor", "shower", "parking"] },
+  "picklr-toyosu":{ access: "豊洲駅 徒歩8分（塩浜）", hours: "開業前", amenities: ["indoor", "rental", "shower", "lesson"] },
+};
+const AMENITY = {
+  indoor:  { icon: "🏠", label: "屋内" },
+  outdoor: { icon: "☀️", label: "屋外" },
+  rental:  { icon: "🎾", label: "用具レンタル" },
+  shower:  { icon: "🚿", label: "シャワー" },
+  shop:    { icon: "🛍", label: "ショップ" },
+  food:    { icon: "🍽", label: "飲食" },
+  lesson:  { icon: "📖", label: "レッスン" },
+  parking: { icon: "🅿️", label: "駐車場" },
+};
+
 const CATS = [
   { key: "all", label: "すべて" },
   { key: "dedicated", label: "専用コート" },
@@ -517,6 +554,7 @@ export default function PickleIkitai() {
   const refAbout = useRef(null);
   const refSlots = useRef(null);
   const refList = useRef(null);
+  const refRank = useRef(null);
   const refEvents = useRef(null);
   const refPik = useRef(null);
   const refAdd = useRef(null);
@@ -650,6 +688,18 @@ export default function PickleIkitai() {
     setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: user.name, courtCondition: "", photo: "" });
   };
   const timeline = useMemo(() => [...pikkatsu].sort(pikSort).slice(0, 10), [pikkatsu]);
+
+  // 人気ランキング: ピク活件数（同数はイキタイ数→新しさで）でTOP5
+  const ranking = useMemo(() => {
+    const count = {};
+    for (const p of pikkatsu) count[p.facilityId] = (count[p.facilityId] || 0) + 1;
+    return ALL_FACS
+      .filter((f) => !f.upcoming)
+      .map((f) => ({ f, pik: count[f.id] || 0, saved: ikitai.has(f.id) ? 1 : 0 }))
+      .filter((x) => x.pik > 0)
+      .sort((a, b) => b.pik - a.pik || b.saved - a.saved)
+      .slice(0, 5);
+  }, [pikkatsu, userFacs, ikitai]);
   const submitContact = (e) => {
     e.preventDefault();
     if (!contact.name.trim() || !contact.email.trim() || !contact.message.trim()) { showToast("お名前・メール・内容を入力してください"); return; }
@@ -866,6 +916,7 @@ export default function PickleIkitai() {
       <div className="lpNav stickyNav" style={{ background: T.hero1, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px clamp(14px, 4vw, 40px)", gap: 10 }}>
         <div className="lpNavLinks" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
           <a onClick={() => scrollTo(refAbout)}>ピックルイキタイとは</a>
+          <a onClick={() => scrollTo(refRank)}>ランキング</a>
           <a onClick={() => scrollTo(refSlots)}>空き枠</a>
           <a onClick={() => scrollTo(refList)}>コート一覧</a>
           <a onClick={() => scrollTo(refEvents)}>イベント</a>
@@ -1022,8 +1073,42 @@ export default function PickleIkitai() {
         </div>
       </section>
 
+      {/* ==================== 人気ランキング ==================== */}
+      {ranking.length > 0 && (
+        <section ref={refRank} className="section" style={{ background: T.bg }}>
+          <div className="sectionInner">
+            <SectionHead kicker="RANKING" title="いま活発なコート" />
+            <p style={{ textAlign: "center", fontSize: 13, color: "#5E716C", marginTop: 6 }}>
+              ピク活の記録が多い順。人が集まっている＝行けば誰かいる、の目安に。
+            </p>
+            <div style={{ maxWidth: 620, margin: "18px auto 0", display: "flex", flexDirection: "column", gap: 10 }}>
+              {ranking.map((x, i) => {
+                const medal = ["#E8B923", "#AEB7BD", "#C9884E"][i] || T.line;
+                return (
+                  <button key={x.f.id} onClick={() => openDetail(x.f)}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, borderRadius: 16, border: `1.5px solid ${i < 3 ? medal : T.line}`, background: "#fff", cursor: "pointer", textAlign: "left", fontFamily: FONT }}>
+                    <div style={{ flexShrink: 0, width: 34, textAlign: "center", fontWeight: 900, fontStyle: "italic", fontSize: i < 3 ? 24 : 18, color: i < 3 ? medal : "#AEBCB7" }}>{i + 1}</div>
+                    <div style={{ flexShrink: 0, width: 68, height: 52, borderRadius: 10, overflow: "hidden", position: "relative" }}>
+                      <CourtImage fac={x.f} height={52} rounded={10} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 900, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.f.name}</div>
+                      <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 2 }}>{x.f.area} ・ {x.f.indoor ? "屋内" : "屋外"}</div>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: "right" }}>
+                      <div style={{ fontWeight: 900, fontSize: 16, color: T.ballInk }}>⚡{x.pik}</div>
+                      <div style={{ fontSize: 10, color: "#AEBCB7" }}>ピク活</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ==================== 空き枠 ==================== */}
-      <section ref={refSlots} className="section" style={{ background: T.bg }}>
+      <section ref={refSlots} className="section" style={{ background: "#fff" }}>
         <div className="narrowInner">
           <SectionHead kicker="AVAILABILITY" title="空き枠をさがす" />
 
@@ -1082,7 +1167,7 @@ export default function PickleIkitai() {
       </section>
 
       {/* ==================== コート一覧 ==================== */}
-      <section ref={refList} className="section" style={{ background: "#fff" }}>
+      <section ref={refList} className="section" style={{ background: T.bg }}>
         <div className="sectionInner">
           <SectionHead kicker="COURTS" title="コート一覧" />
 
@@ -1605,6 +1690,35 @@ export default function PickleIkitai() {
                   📊 混雑傾向: {t}
                 </div>
               ) : null;
+            })()}
+
+            {/* 基本情報（最寄駅・営業時間・設備） */}
+            {(() => {
+              const m = FAC_META[detail.id];
+              if (!m) return null;
+              return (
+                <div style={{ marginTop: 14, border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
+                  {m.access && (
+                    <div style={{ display: "flex", gap: 8, fontSize: 13, color: "#455B57" }}>
+                      <span style={{ flexShrink: 0 }}>🚉</span><span>{m.access}</span>
+                    </div>
+                  )}
+                  {m.hours && (
+                    <div style={{ display: "flex", gap: 8, fontSize: 13, color: "#455B57", marginTop: 7 }}>
+                      <span style={{ flexShrink: 0 }}>🕒</span><span>{m.hours}</span>
+                    </div>
+                  )}
+                  {m.amenities?.length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                      {m.amenities.map((a) => AMENITY[a] && (
+                        <span key={a} style={{ fontSize: 11, fontWeight: 700, color: T.ink, background: "#EFF5EE", borderRadius: 8, padding: "3px 8px" }}>
+                          {AMENITY[a].icon} {AMENITY[a].label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
             })()}
 
             {/* プラン・料金 */}
