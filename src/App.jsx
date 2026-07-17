@@ -574,6 +574,7 @@ export default function PickleIkitai() {
   const [venueFilter, setVenueFilter] = useState("all"); // all | indoor | outdoor
   // 「ホーム画面に追加」誘導（一度閉じたら二度と出さない・スクロール後に控えめに）
   const [a2hs, setA2hs] = useState(false);
+  const [pwaGuide, setPwaGuide] = useState(false); // アプリ追加の手順モーダル
   const [sheet, setSheet] = useState(null);
   const [detail, setDetail] = useState(null);
   const [toast, setToast] = useState(null);
@@ -1003,6 +1004,39 @@ export default function PickleIkitai() {
       {toast && <div style={S.toast}>📣 {toast}</div>}
 
       {/* ホーム画面に追加の控えめな誘導（下部・1回のみ・閉じたら二度と出ない） */}
+      {pwaGuide && (() => {
+        const ua = navigator.userAgent;
+        const isIOS = /iPhone|iPad|iPod/.test(ua);
+        const isAndroid = /Android/.test(ua);
+        const steps = isIOS
+          ? ["Safari下部の共有ボタン（□に↑）をタップ", "「ホーム画面に追加」を選ぶ", "右上の「追加」をタップして完了"]
+          : isAndroid
+          ? ["ブラウザ右上のメニュー（⋮）を開く", "「アプリをインストール」または「ホーム画面に追加」を選ぶ", "「追加」で完了"]
+          : ["ブラウザのアドレスバー右のインストールアイコン、またはメニューを開く", "「アプリをインストール」を選ぶ", "追加して完了"];
+        return (
+          <>
+            <div style={{ ...S.sheetBack, zIndex: 100 }} onClick={() => setPwaGuide(false)} />
+            <div style={{ ...S.sheet, zIndex: 110, maxWidth: 420 }}>
+              <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 14px" }} />
+              <div style={{ textAlign: "center" }}>
+                <div style={{ width: 64, height: 64, borderRadius: 16, margin: "0 auto", background: T.hero1, display: "grid", placeItems: "center" }}><Ball size={34} /></div>
+                <div style={{ fontWeight: 900, fontSize: 18, marginTop: 12 }}>アプリとして追加する</div>
+                <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.7 }}>ホーム画面に追加すると、アイコンから一発で開けて、アプリのように全画面で使えます。</div>
+              </div>
+              <div style={{ marginTop: 18 }}>
+                {steps.map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 12 }}>
+                    <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 13, display: "grid", placeItems: "center" }}>{i + 1}</span>
+                    <span style={{ fontSize: 14, lineHeight: 1.6, paddingTop: 1 }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+              <button style={{ ...S.btn(true), marginTop: 20 }} onClick={() => setPwaGuide(false)}>わかった</button>
+            </div>
+          </>
+        );
+      })()}
+
       {a2hs && (
         <div style={{ position: "fixed", left: 12, right: 12, bottom: 14, maxWidth: 460, margin: "0 auto", zIndex: 90, background: "#fff", borderRadius: 16, boxShadow: "0 8px 30px rgba(14,42,43,0.28)", border: `1.5px solid ${T.line}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: T.hero1, display: "grid", placeItems: "center" }}>
@@ -1033,6 +1067,9 @@ export default function PickleIkitai() {
           <a onClick={() => scrollTo(refAdd)}>コート登録</a>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <button onClick={() => setPwaGuide(true)} style={{ display: "flex", alignItems: "center", gap: 4, border: "1.5px solid rgba(255,255,255,0.55)", borderRadius: 999, padding: "5px 11px", background: "transparent", color: "#fff", fontWeight: 900, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>
+            📱 アプリ
+          </button>
           <button onClick={() => window.open(LINE_URL, "_blank")} className="hideMobile" style={{ display: "flex", alignItems: "center", gap: 5, border: "none", borderRadius: 999, padding: "5px 12px", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>
             🌱 伸びしろ報告
           </button>
