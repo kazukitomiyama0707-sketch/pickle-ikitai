@@ -22,7 +22,7 @@ const T = {
 };
 const FONT = `-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif`;
 
-const HOME = { lat: 35.6506, lng: 139.6852 };
+const HOME = { lat: 35.658, lng: 139.7016 }; // 渋谷駅（現在地未取得時の基準）
 const dist = (a, b) => {
   const R = 6371, dLat = ((b.lat - a.lat) * Math.PI) / 180, dLng = ((b.lng - a.lng) * Math.PI) / 180;
   const x = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
@@ -579,7 +579,7 @@ export default function PickleIkitai() {
   const [userFacs, setUserFacs] = useState([]);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  // 現在地（未取得なら池尻大橋を基準にする）
+  // 現在地（未取得なら渋谷を基準にする）
   const [origin, setOrigin] = useState(HOME);
   const [geoState, setGeoState] = useState("idle"); // idle | loading | granted | denied
   const [form, setForm] = useState({ name: "", area: "港区", cat: "public", indoor: "indoor", price: "", note: "", url: "" });
@@ -817,7 +817,7 @@ export default function PickleIkitai() {
     }).map((f) => ({ ...f, km: dist(origin, f) })).sort((a, b) => a.km - b.km);
   }, [submittedQuery, userFacs, origin]);
 
-  // 現在地を取得して基準点にする（失敗時は池尻大橋のまま）
+  // 現在地を取得して基準点にする（失敗時は渋谷のまま）
   const requestLocation = (onDone) => {
     if (!navigator.geolocation) { setGeoState("denied"); showToast("この端末は位置情報に対応していません"); return; }
     setGeoState("loading");
@@ -1279,8 +1279,8 @@ export default function PickleIkitai() {
             {geoState === "granted"
               ? <>📍 現在地から近い順で表示中 ・ <button onClick={() => { setOrigin(HOME); setGeoState("idle"); }} style={{ border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>解除</button></>
               : geoState === "denied"
-              ? "位置情報が使えないため、池尻大橋を基準に表示しています"
-              : "「近い順」をタップすると現在地から並べ替えます"}
+              ? "位置情報が取れないため、渋谷を基準に表示しています"
+              : "いまは渋谷が基準。「近い順」をタップすると現在地から並べ替えます"}
           </div>
 
           {ikitaiCount > 0 && (
@@ -1332,7 +1332,7 @@ export default function PickleIkitai() {
           </div>
           )}
           <div style={{ fontSize: 11, color: "#AEBCB7", textAlign: "center", marginTop: 16 }}>
-            距離は{geoState === "granted" ? "現在地" : "池尻大橋"}起点の直線距離 ・ 現在 {ALL_FACS.length} コート掲載中
+            距離は{geoState === "granted" ? "現在地" : "渋谷"}起点の直線距離 ・ 現在 {ALL_FACS.length} コート掲載中
           </div>
         </div>
       </section>
@@ -1474,7 +1474,7 @@ export default function PickleIkitai() {
                 </p>
 
                 <label style={{ ...S.label, marginTop: 0 }}>お名前 *</label>
-                <input name="name" style={S.input} placeholder="例: 富山 一樹" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
+                <input name="name" style={S.input} placeholder="例: ピックル太郎" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
 
                 <label style={S.label}>メールアドレス *</label>
                 <input name="email" type="email" style={S.input} placeholder="例: you@example.com" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
@@ -1807,7 +1807,7 @@ export default function PickleIkitai() {
             </div>
             <div style={{ fontWeight: 900, fontSize: 19, marginTop: 6 }}>{detail.name}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 4 }}>
-              {detail.area} ・ <VenueTag indoor={detail.indoor} size={13} /> ・ {geoState === "granted" ? "現在地" : "池尻大橋"}から約{dist(origin, detail).toFixed(1)}km
+              {detail.area} ・ <VenueTag indoor={detail.indoor} size={13} /> ・ {geoState === "granted" ? "現在地" : "渋谷"}から約{dist(origin, detail).toFixed(1)}km
             </div>
             <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 6 }}>{detail.rating}</div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.6 }}>{detail.note}</div>
