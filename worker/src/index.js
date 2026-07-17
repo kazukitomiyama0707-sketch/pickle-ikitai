@@ -339,7 +339,7 @@ export default {
         // 写真をR2へ
         let photoKey = null;
         const photo = form.get("photo");
-        if (photo && typeof photo !== "string" && photo.size > 0) {
+        if (env.PHOTOS && photo && typeof photo !== "string" && photo.size > 0) {
           if (photo.size > 8 * 1024 * 1024) return json({ error: "画像は8MBまでです" }, { status: 400 }, origin);
           const ct = safeImageType(photo.type);
           if (!ct) return json({ error: "対応形式はJPEG/PNG/WebP/GIFです" }, { status: 400 }, origin);
@@ -389,6 +389,7 @@ export default {
 
       /* --- 写真配信 --- */
       if (path.startsWith("/photos/")) {
+        if (!env.PHOTOS) return new Response("Not found", { status: 404 });
         const key = path.slice("/photos/".length);
         const obj = await env.PHOTOS.get(key);
         if (!obj) return new Response("Not found", { status: 404 });
@@ -409,6 +410,7 @@ export default {
       if (path === "/api/fetch-og-image" && request.method === "POST") {
         const user = await currentUser(request, env);
         if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        if (!env.PHOTOS) return json({ photo: null }, {}, origin); // 写真保存はR2有効化後
         const { url: target } = await request.json();
         // https限定＋内部アドレス拒否＋リダイレクト再検証（SSRF対策）
         const res = await safeFetchImageOrPage(target);

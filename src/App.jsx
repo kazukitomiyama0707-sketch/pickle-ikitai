@@ -541,6 +541,8 @@ const CourtImage = ({ fac, height, rounded = 14, showBadge = false }) => {
 const OPERATOR = "MUFASA Technology";
 const CONTACT_EMAIL = "pickleikitai@gmail.com";
 const LINE_URL = "https://lin.ee/OWBC5Kw"; // 公式LINE（伸びしろ報告の送信先）
+const API_BASE = "https://pickleikitai-api.kazukitomiyama0707.workers.dev";
+const startLineLogin = () => { window.location.href = `${API_BASE}/auth/line/start?return=${encodeURIComponent(window.location.origin + "/")}`; };
 const TERMS = [
   ["第1条（サービス内容）", "「ピックルイキタイ」（以下、本サービス）は、東京および関東圏のピックルボールコート・イベント情報を横断的に紹介する情報ポータルです。コートの予約・利用契約は利用者と各施設との間で直接成立し、本サービスはその当事者となりません。"],
   ["第2条（情報の正確性）", "本サービスは掲載情報の正確性・完全性・最新性を保証しません。料金・空き状況・ピックルボール利用の可否等は、必ず各施設の公式情報をご確認ください。空き枠表示は参考情報であり、実際の予約可否を保証するものではありません。"],
@@ -739,6 +741,26 @@ export default function PickleIkitai() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const dismissA2hs = () => { setA2hs(false); localStorage.setItem("pk_a2hs_dismissed", "1"); };
+
+  // LINEログインのコールバック(#token=...)を受け取り、APIでユーザーを取得
+  useEffect(() => {
+    const m = /[#&]token=([^&]+)/.exec(window.location.hash);
+    const saved = localStorage.getItem("pk_jwt");
+    const token = m ? decodeURIComponent(m[1]) : saved;
+    if (m) { localStorage.setItem("pk_jwt", token); history.replaceState(null, "", window.location.pathname + window.location.search); }
+    if (!token) return;
+    fetch(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.user) {
+          const u = { name: d.user.name, id: d.user.id, line: true };
+          setUser(u);
+          localStorage.setItem("pk_user", JSON.stringify(u));
+          if (m) showToast(`ようこそ、${d.user.name}さん⚡`);
+        } else { localStorage.removeItem("pk_jwt"); }
+      })
+      .catch(() => {});
+  }, []);
 
   const doAuth = () => {
     const n = sanitizeText(authName).trim().slice(0, 20);
@@ -1599,7 +1621,7 @@ export default function PickleIkitai() {
                 <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 4 }}>
                   ⚡ ピク活 {pikkatsu.filter((p) => p.nickname === user?.name).length}件
                 </div>
-                <button style={{ ...S.btn(false), marginTop: 18 }} onClick={() => { localStorage.removeItem("pk_user"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
+                <button style={{ ...S.btn(false), marginTop: 18 }} onClick={() => { localStorage.removeItem("pk_user"); localStorage.removeItem("pk_jwt"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
                 <button style={S.btn(false)} onClick={() => setAuthView(null)}>閉じる</button>
               </div>
             ) : (
@@ -1616,11 +1638,10 @@ export default function PickleIkitai() {
 
                 <div style={{ fontSize: 12, fontWeight: 900, color: "#5E716C", marginTop: 20 }}>SNSアカウントで{authView === "login" ? "ログイン" : "登録"}</div>
                 <button
-                  onClick={() => showToast("LINEログインは準備中です。もう少しお待ちください🙏")}
-                  style={{ width: "100%", marginTop: 10, padding: "13px 0", borderRadius: 12, border: "none", background: "#06C755", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: 0.55 }}>
+                  onClick={startLineLogin}
+                  style={{ width: "100%", marginTop: 10, padding: "13px 0", borderRadius: 12, border: "none", background: "#06C755", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <span style={{ background: "#fff", color: "#06C755", borderRadius: 5, padding: "1px 5px", fontSize: 10, fontWeight: 900 }}>LINE</span>
                   LINEで{authView === "login" ? "ログイン" : "登録"}
-                  <span style={{ fontSize: 10, fontWeight: 800, opacity: 0.9 }}>（準備中）</span>
                 </button>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 4px" }}>
