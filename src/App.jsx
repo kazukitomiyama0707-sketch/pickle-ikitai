@@ -1726,12 +1726,14 @@ export default function PickleIkitai() {
               const courtN = new Set(mine.map((p) => p.facilityId)).size;
               const totalLikes = mine.reduce((n, p) => n + (p.likes || 0), 0);
               const links = user?.links || {};
+              // http/httpsのみ許可（javascript: 等のスキームを弾く）
+              const safeUrl = (u) => { try { const p = new URL(u); return (p.protocol === "http:" || p.protocol === "https:") ? p.toString() : null; } catch { return null; } };
               const linkList = [
-                links.x && { label: "X", url: links.x, icon: "𝕏" },
-                links.instagram && { label: "Instagram", url: links.instagram, icon: "📷" },
-                links.tiktok && { label: "TikTok", url: links.tiktok, icon: "🎵" },
-                links.web && { label: "Web", url: links.web, icon: "🔗" },
-              ].filter(Boolean);
+                links.x && { label: "X", url: safeUrl(links.x), icon: "𝕏" },
+                links.instagram && { label: "Instagram", url: safeUrl(links.instagram), icon: "📷" },
+                links.tiktok && { label: "TikTok", url: safeUrl(links.tiktok), icon: "🎵" },
+                links.web && { label: "Web", url: safeUrl(links.web), icon: "🔗" },
+              ].filter((l) => l && l.url);
               return (
                 <div style={{ paddingBottom: 6 }}>
                   {/* プロフィール */}

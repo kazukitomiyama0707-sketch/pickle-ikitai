@@ -304,7 +304,14 @@ export default {
         const form = await request.formData();
         const name = sanitize(form.get("name") || user.name, 20).trim() || user.name;
         const bio = sanitize(form.get("bio") || "", 160);
-        const norm = (v) => { const s = sanitize(v || "", 200).trim(); return s && /^https?:\/\//i.test(s) ? s : (s ? "https://" + s.replace(/^\/+/, "") : ""); };
+        // http/httpsのみ許可（javascript: 等のスキームはXSSになるため拒否）
+        const norm = (v) => {
+          let s = sanitize(v || "", 200).trim();
+          if (!s) return "";
+          if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = "https://" + s.replace(/^\/+/, "");
+          try { const u = new URL(s); return (u.protocol === "http:" || u.protocol === "https:") ? u.toString() : ""; }
+          catch { return ""; }
+        };
         const link_x = norm(form.get("link_x"));
         const link_instagram = norm(form.get("link_instagram"));
         const link_tiktok = norm(form.get("link_tiktok"));
