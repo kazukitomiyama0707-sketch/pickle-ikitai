@@ -693,7 +693,15 @@ export default function PickleIkitai() {
   const pikCount = (facId) => pikkatsu.reduce((n, p) => n + (p.facilityId === facId ? 1 : 0), 0);
   const facById = (id) => ALL_FACS.find((f) => f.id === id);
   const openDetail = (f) => { setDetail(f); setDetailPikLimit(3); };
-  const likePik = (id) => setPikkatsu((list) => list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)));
+  const likePik = (id) => {
+    setPikkatsu((list) => list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)));
+    const token = authToken();
+    if (!token || !String(id).match(/^[0-9a-f-]{36}$/)) return; // ローカル投稿(シード)はAPI対象外
+    fetch(`${API_BASE}/api/pikkatsu/${id}/like`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.likes === "number") setPikkatsu((list) => list.map((p) => (p.id === id ? { ...p, likes: d.likes } : p))); })
+      .catch(() => {});
+  };
   // 写真は端末内で長辺1000pxに圧縮してdataURL化（本実装ではCloudflare R2にアップロードする）
   const pickPhoto = (file) => {
     if (!file) return;
@@ -763,6 +771,24 @@ export default function PickleIkitai() {
       .catch(() => {});
   }, []);
 
+  // ピク活を共有DB(D1)から取得。API側に投稿があればシードと統合して表示
+  useEffect(() => {
+    fetch(`${API_BASE}/api/pikkatsu?limit=100`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.items && d.items.length) {
+          setPikkatsu((seed) => {
+            const ids = new Set(d.items.map((x) => x.id));
+            // API投稿を先頭に、既存シードで重複しないものを後ろに
+            return [...d.items, ...seed.filter((s) => !ids.has(s.id))];
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const authToken = () => localStorage.getItem("pk_jwt");
+
   const doAuth = () => {
     const n = sanitizeText(authName).trim().slice(0, 20);
     if (!n) { showToast("ニックネームを入力してください"); return; }
@@ -801,26 +827,43 @@ export default function PickleIkitai() {
       .catch(() => showToast("送信に失敗しました。時間をおいて再度お試しください"));
   };
 
-  const submitPik = () => {
+  const submitPik = async () => {
     const pf = pikForm;
     if (!pf) return;
     if (!pf.playedAt || !pf.timeBand) { showToast("日付と時間帯を選んでください"); return; }
-    const used = postCount.current[pf.facilityId] || 0;
-    if (used >= 3) { showToast("同じコートへの投稿は1日3件までです"); return; }
     const comment = sanitizeText(pf.comment);
     if (comment && hasNG(comment)) { showToast("コメントに電話番号・URLは含められません"); return; }
+    const token = authToken();
+    // ログイン済みなら共有DB(D1)へ投稿。未ログインはローカル保存にフォールバック
+    if (token) {
+      const fd = new FormData();
+      fd.append("facilityId", pf.facilityId);
+      fd.append("playedAt", pf.playedAt);
+      fd.append("timeBand", pf.timeBand);
+      fd.append("partySize", String(pf.partySize));
+      fd.append("crowd", String(pf.crowd));
+      fd.append("courtCondition", sanitizeText(pf.courtCondition));
+      fd.append("comment", comment);
+      if (pf.photo && pf.photo.startsWith("data:")) {
+        try { const blob = await (await fetch(pf.photo)).blob(); fd.append("photo", blob, "pik.jpg"); } catch {}
+      }
+      setPikForm(null);
+      try {
+        const res = await fetch(`${API_BASE}/api/pikkatsu`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+        const d = await res.json();
+        if (!res.ok) { showToast(d.error || "投稿に失敗しました"); return; }
+        setPikkatsu((list) => [d.item, ...list]);
+        showToast("ナイスピク活⚡");
+      } catch { showToast("通信に失敗しました。時間をおいて再度お試しください"); }
+      return;
+    }
+    // 未ログイン（フォールバック）
+    const used = postCount.current[pf.facilityId] || 0;
+    if (used >= 3) { showToast("同じコートへの投稿は1日3件までです"); return; }
     const rec = {
-      id: "upk" + pikIdRef.current++,
-      facilityId: pf.facilityId,
-      playedAt: pf.playedAt,
-      timeBand: pf.timeBand,
-      partySize: pf.partySize,
-      crowd: pf.crowd,
-      courtCondition: sanitizeText(pf.courtCondition),
-      comment,
-      nickname: sanitizeText(pf.nickname).slice(0, 20),
-      photo: pf.photo || "",
-      likes: 0,
+      id: "upk" + pikIdRef.current++, facilityId: pf.facilityId, playedAt: pf.playedAt, timeBand: pf.timeBand,
+      partySize: pf.partySize, crowd: pf.crowd, courtCondition: sanitizeText(pf.courtCondition),
+      comment, nickname: sanitizeText(pf.nickname).slice(0, 20), photo: pf.photo || "", likes: 0,
     };
     postCount.current[pf.facilityId] = used + 1;
     setPikkatsu((list) => [rec, ...list]);

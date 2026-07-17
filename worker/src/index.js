@@ -192,6 +192,17 @@ async function currentUser(request, env) {
   return await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(payload.sub).first();
 }
 
+// ユーザー行 → クライアントに返すプロフィール
+function profileOf(u, origin) {
+  return {
+    id: u.id,
+    name: u.name,
+    bio: u.bio || "",
+    avatar: u.avatar_key ? `${origin}/photos/${u.avatar_key}` : (u.avatar_url || null),
+    links: { x: u.link_x || "", instagram: u.link_instagram || "", tiktok: u.link_tiktok || "", web: u.link_web || "" },
+  };
+}
+
 /* ---------------- 入力ガード ---------------- */
 const sanitize = (s = "", max = 140) => String(s).replace(/[<>]/g, "").slice(0, max);
 const hasNG = (s = "") => /(https?:\/\/|www\.)/i.test(s) || /\d{2,4}-\d{2,4}-\d{3,4}/.test(s) || /\d{10,11}/.test(s);
@@ -283,7 +294,37 @@ export default {
       if (path === "/api/me") {
         const user = await currentUser(request, env);
         if (!user) return json({ user: null }, {}, origin);
-        return json({ user: { id: user.id, name: user.name, avatar: user.avatar_url } }, {}, origin);
+        return json({ user: profileOf(user, url.origin) }, {}, origin);
+      }
+
+      /* --- プロフィール更新（名前・自己紹介・SNSリンク・アバター） --- */
+      if (path === "/api/profile" && request.method === "POST") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        const form = await request.formData();
+        const name = sanitize(form.get("name") || user.name, 20).trim() || user.name;
+        const bio = sanitize(form.get("bio") || "", 160);
+        const norm = (v) => { const s = sanitize(v || "", 200).trim(); return s && /^https?:\/\//i.test(s) ? s : (s ? "https://" + s.replace(/^\/+/, "") : ""); };
+        const link_x = norm(form.get("link_x"));
+        const link_instagram = norm(form.get("link_instagram"));
+        const link_tiktok = norm(form.get("link_tiktok"));
+        const link_web = norm(form.get("link_web"));
+
+        let avatarKey = user.avatar_key || null;
+        const avatar = form.get("avatar");
+        if (env.PHOTOS && avatar && typeof avatar !== "string" && avatar.size > 0) {
+          if (avatar.size > 6 * 1024 * 1024) return json({ error: "画像は6MBまでです" }, { status: 400 }, origin);
+          const ct = safeImageType(avatar.type);
+          if (!ct) return json({ error: "対応形式はJPEG/PNG/WebP/GIFです" }, { status: 400 }, origin);
+          avatarKey = `avatar/${uuid()}`;
+          await env.PHOTOS.put(avatarKey, avatar.stream(), { httpMetadata: { contentType: ct } });
+        }
+
+        await env.DB.prepare(
+          `UPDATE users SET name=?, bio=?, link_x=?, link_instagram=?, link_tiktok=?, link_web=?, avatar_key=? WHERE id=?`
+        ).bind(name, bio, link_x, link_instagram, link_tiktok, link_web, avatarKey, user.id).run();
+        const fresh = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(user.id).first();
+        return json({ user: profileOf(fresh, url.origin) }, {}, origin);
       }
 
       /* --- ピク活一覧 --- */
