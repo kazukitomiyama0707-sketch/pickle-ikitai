@@ -585,6 +585,8 @@ export default function PickleIkitai() {
   const [form, setForm] = useState({ name: "", area: "港区", cat: "public", indoor: "indoor", price: "", note: "", url: "" });
   const [pikkatsu, setPikkatsu] = useState(SEED_PIKKATSU);
   const [pikForm, setPikForm] = useState(null);
+  const [pikPicker, setPikPicker] = useState(false); // 施設を選んでピク活投稿
+  const [pikPickerQ, setPikPickerQ] = useState("");
   const [detailPikLimit, setDetailPikLimit] = useState(3);
   const [legalView, setLegalView] = useState(null);
   // 認証: 現状はブラウザ内の暫定アカウント。LINEログイン(OAuth)+D1が通ったら差し替える
@@ -1003,6 +1005,7 @@ export default function PickleIkitai() {
           <a onClick={() => scrollTo(refRank)}>ランキング</a>
           <a onClick={() => scrollTo(refSlots)}>空き枠</a>
           <a onClick={() => scrollTo(refList)}>コート一覧</a>
+          <a href="/articles/">記事</a>
           <a onClick={() => scrollTo(refEvents)}>イベント</a>
           <a onClick={() => scrollTo(refPik)}>ピク活</a>
           <a onClick={() => scrollTo(refAdd)}>コート登録</a>
@@ -1372,6 +1375,14 @@ export default function PickleIkitai() {
             ⚡ その日どこでどれくらいプレーできたか、みんなの記録。<br className="hideMobile" />
             ★評価じゃなく「自分のプレー記録」。混雑や実績の生きた情報がここに溜まる。
           </p>
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <button
+              onClick={() => { if (!user) { setAuthView("signup"); showToast("ピク活の投稿には登録が必要です"); return; } setPikPicker(true); }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 999, border: "none", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: FONT, boxShadow: "0 4px 14px rgba(215,244,56,0.5)" }}>
+              ⚡ ピク活を投稿する
+            </button>
+            {!user && <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 8 }}>投稿には無料の新規登録が必要です</div>}
+          </div>
           <div style={{ maxWidth: 560, margin: "18px auto 0" }}>
             {timeline.map((k) => {
               const f = facById(k.facilityId);
@@ -1660,6 +1671,44 @@ export default function PickleIkitai() {
               {CONTACT_EMAIL}
             </div>
             <button style={{ ...S.btn(true), marginTop: 18 }} onClick={() => setLegalView(null)}>閉じる</button>
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: ピク活の施設を選ぶ ==================== */}
+      {pikPicker && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 55 }} onClick={() => { setPikPicker(false); setPikPickerQ(""); }} />
+          <div style={{ ...S.sheet, zIndex: 65 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
+            <div style={{ fontWeight: 900, fontSize: 17 }}>⚡ どのコートでプレーした？</div>
+            <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 3 }}>コートを選ぶとピク活を記録できます</div>
+            <input
+              autoFocus
+              style={{ ...S.input, marginTop: 12 }}
+              placeholder="コート名・エリアで絞り込む"
+              value={pikPickerQ}
+              onChange={(e) => setPikPickerQ(e.target.value)}
+            />
+            <div style={{ marginTop: 10 }}>
+              {ALL_FACS
+                .filter((f) => !f.upcoming)
+                .filter((f) => { const q = pikPickerQ.trim(); return !q || (f.name + f.area).includes(q); })
+                .slice(0, 30)
+                .map((f) => (
+                  <button key={f.id} onClick={() => { setPikPicker(false); setPikPickerQ(""); openPikForm(f); }}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 12px", marginTop: 6, borderRadius: 12, border: `1.5px solid ${T.line}`, background: "#fff", cursor: "pointer", fontFamily: FONT }}>
+                    <div style={{ width: 44, height: 34, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                      <CourtImage fac={f} height={34} rounded={8} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                      <div style={{ fontSize: 11, color: "#8B9B96" }}>{f.area} ・ {f.indoor ? "屋内" : "屋外"}</div>
+                    </div>
+                  </button>
+                ))}
+            </div>
+            <button style={{ ...S.btn(false), marginTop: 12 }} onClick={() => { setPikPicker(false); setPikPickerQ(""); }}>キャンセル</button>
           </div>
         </>
       )}
