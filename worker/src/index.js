@@ -28,6 +28,10 @@ const json = (data, init = {}, origin = "") =>
 const uuid = () => crypto.randomUUID();
 const nowISO = () => new Date().toISOString();
 
+// ラスター画像のみ許可（SVGはスクリプトを埋め込めるためStored XSSになる）
+const SAFE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const safeImageType = (t) => (SAFE_IMAGE_TYPES.has(String(t).split(";")[0].trim().toLowerCase()) ? String(t).split(";")[0].trim().toLowerCase() : null);
+
 /**
  * ログイン後の戻り先URLを許可オリジンに限定する。
  * 未検証だと ?return=https://evil.example に飛ばされ、
@@ -337,9 +341,10 @@ export default {
         const photo = form.get("photo");
         if (photo && typeof photo !== "string" && photo.size > 0) {
           if (photo.size > 8 * 1024 * 1024) return json({ error: "画像は8MBまでです" }, { status: 400 }, origin);
-          if (!String(photo.type).startsWith("image/")) return json({ error: "画像ファイルを選んでください" }, { status: 400 }, origin);
-          photoKey = `pik/${uuid()}.jpg`;
-          await env.PHOTOS.put(photoKey, photo.stream(), { httpMetadata: { contentType: photo.type } });
+          const ct = safeImageType(photo.type);
+          if (!ct) return json({ error: "対応形式はJPEG/PNG/WebP/GIFです" }, { status: 400 }, origin);
+          photoKey = `pik/${uuid()}`;
+          await env.PHOTOS.put(photoKey, photo.stream(), { httpMetadata: { contentType: ct } });
         }
 
         const id = uuid();
@@ -387,9 +392,13 @@ export default {
         const key = path.slice("/photos/".length);
         const obj = await env.PHOTOS.get(key);
         if (!obj) return new Response("Not found", { status: 404 });
+        // 保存済みタイプがallowlistに無ければ octet-stream に落とす。スクリプト実行を防ぐガードを付与。
+        const stored = safeImageType(obj.httpMetadata?.contentType || "") || "application/octet-stream";
         return new Response(obj.body, {
           headers: {
-            "Content-Type": obj.httpMetadata?.contentType || "image/jpeg",
+            "Content-Type": stored,
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
             "Cache-Control": "public, max-age=31536000, immutable",
             ...cors(origin),
           },
@@ -412,19 +421,20 @@ export default {
         // 画像URLも同じ基準で再検証してから取得する
         const imgUrl = new URL(og[1], res.url || target).toString();
         const imgRes = await safeFetchImageOrPage(imgUrl);
-        const ctype = imgRes && String(imgRes.headers.get("content-type") || "");
-        if (!imgRes || !ctype.startsWith("image/")) return json({ photo: null }, {}, origin);
+        const ctype = imgRes && safeImageType(imgRes.headers.get("content-type") || "");
+        if (!imgRes || !ctype) return json({ photo: null }, {}, origin);
         // レスポンスサイズを上限で打ち切る（10MB）
         const buf = await imgRes.arrayBuffer();
         if (buf.byteLength > 10 * 1024 * 1024) return json({ error: "画像が大きすぎます" }, { status: 400 }, origin);
-        const key = `court/${uuid()}.jpg`;
+        const key = `court/${uuid()}`;
         await env.PHOTOS.put(key, buf, { httpMetadata: { contentType: ctype } });
         return json({ photo: `${url.origin}/photos/${key}` }, {}, origin);
       }
 
       return json({ error: "Not found" }, { status: 404 }, origin);
     } catch (err) {
-      return json({ error: "サーバーエラー", detail: String(err) }, { status: 500 }, origin);
+      console.error(err);
+      return json({ error: "サーバーエラーが発生しました" }, { status: 500 }, origin);
     }
   },
 };
