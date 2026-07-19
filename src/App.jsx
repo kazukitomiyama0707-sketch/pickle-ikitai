@@ -828,8 +828,8 @@ export default function PickleIkitai() {
   };
   // ピク活投稿はログイン必須
   const openPikForm = (fac) => {
-    if (!user) { setAuthView("login"); showToast("ピク活の投稿にはログインが必要です"); return; }
-    setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: user.name, courtCondition: "", photo: "" });
+    // まず書ける。保存時にログイン/登録を促す（投稿ハードルを下げる）
+    setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: user?.name || "", courtCondition: "", photo: "" });
   };
   const timeline = useMemo(() => [...pikkatsu].sort(pikSort).slice(0, 10), [pikkatsu]);
 

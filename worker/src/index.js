@@ -219,38 +219,29 @@ export default {
     try {
       /* --- LINEログイン開始 --- */
       if (path === "/auth/line/start") {
-        const state = uuid();
         const redirect = `${url.origin}/auth/line/callback`;
+        const back = safeReturnUrl(url.searchParams.get("return"));
+        if (!back) return new Response("戻り先URLが不正です", { status: 400 });
+        // stateは署名付きJWTにして戻り先も内包（cookieに依存せずCSRF検証できる）
+        const state = await signJWT({ b: back, n: uuid(), exp: Math.floor(Date.now() / 1000) + 600 }, env.JWT_SECRET);
         const authUrl = new URL("https://access.line.me/oauth2/v2.1/authorize");
         authUrl.searchParams.set("response_type", "code");
         authUrl.searchParams.set("client_id", env.LINE_CHANNEL_ID);
         authUrl.searchParams.set("redirect_uri", redirect);
         authUrl.searchParams.set("state", state);
         authUrl.searchParams.set("scope", "profile openid");
-        // 戻り先はオリジンを許可リストで検証する。
-        // 未検証のURLに飛ばすとJWTが#token=で第三者に渡り、アカウント乗っ取りになる。
-        const back = safeReturnUrl(url.searchParams.get("return"));
-        if (!back) return new Response("戻り先URLが不正です", { status: 400 });
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: authUrl.toString(),
-            "Set-Cookie": `line_state=${state}|${encodeURIComponent(back)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
-          },
-        });
+        return new Response(null, { status: 302, headers: { Location: authUrl.toString() } });
       }
 
       /* --- LINEログイン コールバック --- */
       if (path === "/auth/line/callback") {
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
-        const cookie = request.headers.get("Cookie") || "";
-        const saved = /line_state=([^;]+)/.exec(cookie)?.[1] || "";
-        const [savedState, backEnc] = saved.split("|");
-        if (!code || !state || state !== savedState) return new Response("認証に失敗しました（state不一致）", { status: 400 });
-        // Cookieが差し替えられた場合に備え、戻り先はここでも検証する
-        const back = safeReturnUrl(backEnc ? decodeURIComponent(backEnc) : null);
-        if (!back) return new Response("戻り先URLが不正です", { status: 400 });
+        if (!code || !state) return new Response("認証に失敗しました（パラメータ不足）", { status: 400 });
+        // 署名付きstateを検証（cookie非依存）。改ざん・期限切れは弾かれる
+        const st = await verifyJWT(state, env.JWT_SECRET);
+        const back = st && safeReturnUrl(st.b);
+        if (!back) return new Response("認証に失敗しました（stateが無効です）", { status: 400 });
 
         const tokenRes = await fetch("https://api.line.me/oauth2/v2.1/token", {
           method: "POST",
@@ -272,13 +263,20 @@ export default {
         if (!profRes.ok) return new Response("LINEプロフィール取得に失敗しました", { status: 502 });
         const prof = await profRes.json();
 
-        let user = await env.DB.prepare("SELECT * FROM users WHERE line_user_id = ?").bind(prof.userId).first();
-        if (!user) {
-          const id = uuid();
-          await env.DB.prepare("INSERT INTO users (id, line_user_id, name, avatar_url, created_at) VALUES (?, ?, ?, ?, ?)")
-            .bind(id, prof.userId, sanitize(prof.displayName || "ピックラー", 20), prof.pictureUrl || null, nowISO())
-            .run();
-          user = { id, name: prof.displayName, avatar_url: prof.pictureUrl };
+        if (!prof.userId) return new Response("LINEユーザーIDが取得できませんでした", { status: 502 });
+        let user;
+        try {
+          user = await env.DB.prepare("SELECT * FROM users WHERE line_user_id = ?").bind(prof.userId).first();
+          if (!user) {
+            const id = uuid();
+            await env.DB.prepare("INSERT INTO users (id, line_user_id, name, avatar_url, created_at) VALUES (?, ?, ?, ?, ?)")
+              .bind(id, prof.userId, sanitize(prof.displayName || "ピックラー", 20), prof.pictureUrl || null, nowISO())
+              .run();
+            user = { id, name: prof.displayName, avatar_url: prof.pictureUrl };
+          }
+        } catch (e) {
+          console.error("user upsert failed", String(e));
+          return new Response("ユーザー登録に失敗しました: " + String(e).slice(0, 200), { status: 500 });
         }
 
         const jwt = await signJWT({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 90 }, env.JWT_SECRET);
