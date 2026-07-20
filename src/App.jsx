@@ -596,11 +596,14 @@ export default function PickleIkitai() {
   const [legalView, setLegalView] = useState(null);
   // 認証: 現状はブラウザ内の暫定アカウント。LINEログイン(OAuth)+D1が通ったら差し替える
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("pk_user") || "null"); } catch { return null; }
+    try {
+      const u = JSON.parse(localStorage.getItem("pk_user") || "null");
+      // LINE未経由の旧ローカル専用アカウントは無効化（DBに存在しない偽ログイン状態を防ぐ）
+      if (u && !u.line) { localStorage.removeItem("pk_user"); localStorage.removeItem("pk_jwt"); return null; }
+      return u;
+    } catch { return null; }
   });
   const [authView, setAuthView] = useState(null);
-  const [authName, setAuthName] = useState("");
-  const [authEmail, setAuthEmail] = useState("");
   const [contact, setContact] = useState({ name: "", email: "", message: "", sent: false });
   const timers = useRef([]);
   const idRef = useRef(1);
@@ -816,16 +819,6 @@ export default function PickleIkitai() {
     setSavingProfile(false);
   };
 
-  const doAuth = () => {
-    const n = sanitizeText(authName).trim().slice(0, 20);
-    if (!n) { showToast("ニックネームを入力してください"); return; }
-    const u = { name: n, since: todayISO() };
-    localStorage.setItem("pk_user", JSON.stringify(u));
-    setUser(u);
-    setAuthView(null);
-    setAuthName("");
-    showToast(`ようこそ、${n}さん⚡`);
-  };
   // ピク活投稿はログイン必須
   const openPikForm = (fac) => {
     // まず書ける。保存時にログイン/登録を促す（投稿ハードルを下げる）
@@ -1790,35 +1783,15 @@ export default function PickleIkitai() {
                   ))}
                 </div>
 
-                <div style={{ fontSize: 12, fontWeight: 900, color: "#5E716C", marginTop: 20 }}>SNSアカウントで{authView === "login" ? "ログイン" : "登録"}</div>
+                <div style={{ fontSize: 12, fontWeight: 900, color: "#5E716C", marginTop: 20 }}>LINEアカウントで{authView === "login" ? "ログイン" : "登録"}</div>
                 <button
                   onClick={startLineLogin}
                   style={{ width: "100%", marginTop: 10, padding: "13px 0", borderRadius: 12, border: "none", background: "#06C755", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <span style={{ background: "#fff", color: "#06C755", borderRadius: 5, padding: "1px 5px", fontSize: 10, fontWeight: 900 }}>LINE</span>
                   LINEで{authView === "login" ? "ログイン" : "登録"}
                 </button>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 4px" }}>
-                  <div style={{ flex: 1, height: 1, background: T.line }} />
-                  <span style={{ fontSize: 11, color: "#AEBCB7", fontWeight: 700 }}>または</span>
-                  <div style={{ flex: 1, height: 1, background: T.line }} />
-                </div>
-
-                <label style={S.label}>ニックネーム</label>
-                <input
-                  style={S.input}
-                  maxLength={20}
-                  placeholder="例: 銀座ドロップ"
-                  value={authName}
-                  onChange={(e) => setAuthName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && doAuth()}
-                />
-                <button style={{ ...S.btn(true), marginTop: 16 }} onClick={doAuth}>
-                  {authView === "login" ? "ログイン" : "この名前で始める"}
-                </button>
-                <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 10, textAlign: "center", lineHeight: 1.8 }}>
-                  {authView === "signup" && <>登録により<button onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・<button onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします<br /></>}
-                  ※現在はこの端末内に保存される簡易アカウントです
+                <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 12, textAlign: "center", lineHeight: 1.8 }}>
+                  {authView === "signup" && <>登録により<button onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・<button onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします</>}
                 </div>
               </>
             )}
