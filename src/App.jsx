@@ -604,6 +604,8 @@ export default function PickleIkitai() {
     } catch { return null; }
   });
   const [authView, setAuthView] = useState(null);
+  const [emailForm, setEmailForm] = useState({ email: "", password: "", name: "" });
+  const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [contact, setContact] = useState({ name: "", email: "", message: "", sent: false });
   const timers = useRef([]);
   const idRef = useRef(1);
@@ -817,6 +819,31 @@ export default function PickleIkitai() {
       setProfileEdit(null); showToast("プロフィールを更新しました");
     } catch { showToast("通信に失敗しました"); }
     setSavingProfile(false);
+  };
+
+  // メール+パスワードでの登録・ログイン（LINEと並行の第二の入口）
+  const submitEmailAuth = async () => {
+    const { email, password, name } = emailForm;
+    if (!email.trim() || !password) { showToast("メールアドレスとパスワードを入力してください"); return; }
+    const isSignup = authView === "signup";
+    if (isSignup && password.length < 8) { showToast("パスワードは8文字以上にしてください"); return; }
+    setEmailSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/${isSignup ? "signup" : "login"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, name: name.trim() || undefined }),
+      });
+      const d = await res.json();
+      if (!res.ok) { showToast(d.error || "処理に失敗しました"); setEmailSubmitting(false); return; }
+      localStorage.setItem("pk_jwt", d.token);
+      const u = { ...d.user, line: true };
+      setUser(u); localStorage.setItem("pk_user", JSON.stringify(u));
+      setAuthView(null);
+      setEmailForm({ email: "", password: "", name: "" });
+      showToast(`ようこそ、${d.user.name}さん⚡`);
+    } catch { showToast("通信に失敗しました。時間をおいて再度お試しください"); }
+    setEmailSubmitting(false);
   };
 
   // ピク活投稿はログイン必須
@@ -1790,6 +1817,45 @@ export default function PickleIkitai() {
                   <span style={{ background: "#fff", color: "#06C755", borderRadius: 5, padding: "1px 5px", fontSize: 10, fontWeight: 900 }}>LINE</span>
                   LINEで{authView === "login" ? "ログイン" : "登録"}
                 </button>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 4px" }}>
+                  <div style={{ flex: 1, height: 1, background: T.line }} />
+                  <span style={{ fontSize: 11, color: "#AEBCB7", fontWeight: 700 }}>または</span>
+                  <div style={{ flex: 1, height: 1, background: T.line }} />
+                </div>
+
+                <div style={{ fontSize: 12, fontWeight: 900, color: "#5E716C", marginTop: 10 }}>メールアドレスで{authView === "login" ? "ログイン" : "登録"}</div>
+                {authView === "signup" && (
+                  <input
+                    style={{ ...S.input, marginTop: 8 }}
+                    placeholder="ニックネーム（例: ピックル太郎）"
+                    maxLength={20}
+                    value={emailForm.name}
+                    onChange={(e) => setEmailForm({ ...emailForm, name: e.target.value })}
+                  />
+                )}
+                <input
+                  type="email"
+                  style={{ ...S.input, marginTop: 8 }}
+                  placeholder="メールアドレス"
+                  value={emailForm.email}
+                  onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                />
+                <input
+                  type="password"
+                  style={{ ...S.input, marginTop: 8 }}
+                  placeholder={authView === "signup" ? "パスワード（8文字以上）" : "パスワード"}
+                  value={emailForm.password}
+                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && submitEmailAuth()}
+                />
+                <button
+                  onClick={submitEmailAuth}
+                  disabled={emailSubmitting}
+                  style={{ width: "100%", marginTop: 10, padding: "13px 0", borderRadius: 12, border: `1.5px solid ${T.ink}`, background: "#fff", color: T.ink, fontWeight: 900, fontSize: 14, cursor: emailSubmitting ? "default" : "pointer", fontFamily: FONT, opacity: emailSubmitting ? 0.6 : 1 }}>
+                  {emailSubmitting ? "送信中…" : authView === "signup" ? "メールで登録する" : "メールでログイン"}
+                </button>
+
                 <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 12, textAlign: "center", lineHeight: 1.8 }}>
                   {authView === "signup" && <>登録により<button onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・<button onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします</>}
                 </div>

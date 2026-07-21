@@ -157,6 +157,27 @@ const b64urlDecode = (s) => {
   return atob(s + "=".repeat((4 - (s.length % 4)) % 4));
 };
 
+/* ---------------- パスワードハッシュ (PBKDF2-SHA256, Web Crypto標準API) ---------------- */
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
+  return `${b64url(salt)}.${b64url(bits)}`;
+}
+async function verifyPassword(password, stored) {
+  try {
+    const [saltB64, hashB64] = String(stored).split(".");
+    if (!saltB64 || !hashB64) return false;
+    const salt = Uint8Array.from(b64urlDecode(saltB64), (c) => c.charCodeAt(0));
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
+    return b64url(bits) === hashB64;
+  } catch { return false; }
+}
+const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ""));
+
 async function signJWT(payload, secret) {
   const header = { alg: "HS256", typ: "JWT" };
   const enc = new TextEncoder();
@@ -286,6 +307,39 @@ export default {
           status: 302,
           headers: { Location: dest.toString(), "Set-Cookie": "line_state=; Max-Age=0; Path=/" },
         });
+      }
+
+      /* --- メール+パスワードで新規登録 --- */
+      if (path === "/api/auth/signup" && request.method === "POST") {
+        const body = await request.json();
+        const email = String(body.email || "").trim().toLowerCase();
+        const password = String(body.password || "");
+        const name = sanitize(body.name || "ピックラー", 20).trim() || "ピックラー";
+        if (!isValidEmail(email)) return json({ error: "メールアドレスの形式が正しくありません" }, { status: 400 }, origin);
+        if (password.length < 8) return json({ error: "パスワードは8文字以上にしてください" }, { status: 400 }, origin);
+        const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+        if (existing) return json({ error: "このメールアドレスは既に登録されています" }, { status: 409 }, origin);
+        const id = uuid();
+        const hash = await hashPassword(password);
+        await env.DB.prepare("INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)")
+          .bind(id, email, hash, name, nowISO()).run();
+        const jwt = await signJWT({ sub: id, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 90 }, env.JWT_SECRET);
+        const user = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id).first();
+        return json({ token: jwt, user: profileOf(user, url.origin) }, {}, origin);
+      }
+
+      /* --- メール+パスワードでログイン --- */
+      if (path === "/api/auth/login" && request.method === "POST") {
+        const body = await request.json();
+        const email = String(body.email || "").trim().toLowerCase();
+        const password = String(body.password || "");
+        if (!isValidEmail(email) || !password) return json({ error: "メールアドレスとパスワードを入力してください" }, { status: 400 }, origin);
+        const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+        if (!user || !user.password_hash) return json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 }, origin);
+        const ok = await verifyPassword(password, user.password_hash);
+        if (!ok) return json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 }, origin);
+        const jwt = await signJWT({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 90 }, env.JWT_SECRET);
+        return json({ token: jwt, user: profileOf(user, url.origin) }, {}, origin);
       }
 
       /* --- 自分の情報 --- */
