@@ -867,6 +867,11 @@ export default function PickleIkitai() {
     // まず書ける。保存時にログイン/登録を促す（投稿ハードルを下げる）
     setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: user?.name || "", courtCondition: "", photo: "" });
   };
+  // どこからでも呼べるピク活投稿の入口（右下FAB・ナビ・マイページ共通）
+  const openPikGlobal = () => {
+    if (!user) { setAuthView("signup"); showToast("ピク活の投稿には登録が必要です"); return; }
+    setPikPicker(true);
+  };
   const timeline = useMemo(() => [...pikkatsu].sort(pikSort).slice(0, 10), [pikkatsu]);
 
   // 人気ランキング: ピク活件数（同数はイキタイ数→新しさで）でTOP5
@@ -1234,6 +1239,9 @@ export default function PickleIkitai() {
           <a onClick={() => scrollTo(refAdd)}>コート登録</a>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <button onClick={openPikGlobal} style={{ display: "flex", alignItems: "center", gap: 4, border: "none", borderRadius: 999, padding: "5px 12px", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>
+            ⚡ 投稿する
+          </button>
           <button onClick={() => setPwaGuide(true)} style={{ display: "flex", alignItems: "center", gap: 4, border: "1.5px solid rgba(255,255,255,0.55)", borderRadius: 999, padding: "5px 11px", background: "transparent", color: "#fff", fontWeight: 900, fontSize: 11, cursor: "pointer", fontFamily: FONT, whiteSpace: "nowrap" }}>
             📱 アプリ
           </button>
@@ -1609,7 +1617,7 @@ export default function PickleIkitai() {
           </p>
           <div style={{ textAlign: "center", marginTop: 16 }}>
             <button
-              onClick={() => { if (!user) { setAuthView("signup"); showToast("ピク活の投稿には登録が必要です"); return; } setPikPicker(true); }}
+              onClick={openPikGlobal}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 999, border: "none", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: FONT, boxShadow: "0 4px 14px rgba(215,244,56,0.5)" }}>
               ⚡ ピク活を投稿する
             </button>
@@ -1889,10 +1897,10 @@ export default function PickleIkitai() {
                     ))}
                   </div>
 
-                  {/* 招待リンク */}
+                  {/* 招待リンク + 特典 */}
                   <div style={{ marginTop: 12, background: "#EFF5EE", borderRadius: 14, padding: "14px 16px" }}>
                     <div style={{ fontWeight: 900, fontSize: 13 }}>⚡ 友だちを招待する</div>
-                    <div style={{ fontSize: 11, color: "#5E716C", marginTop: 3, lineHeight: 1.6 }}>このリンクから登録した人が「招待」にカウントされます</div>
+                    <div style={{ fontSize: 11, color: "#5E716C", marginTop: 3, lineHeight: 1.6 }}>このリンクから登録した人が「招待」にカウントされます。招待した人数に応じて特典バッジがもらえます</div>
                     <button
                       onClick={() => {
                         const url = `https://pickleikitai.com/?ref=${user?.id}`;
@@ -1903,10 +1911,38 @@ export default function PickleIkitai() {
                       style={{ width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 10, border: "none", background: T.court, color: "#fff", fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: FONT }}>
                       招待リンクをシェア
                     </button>
+                    {(() => {
+                      const invited = user?.invited || 0;
+                      const tiers = [
+                        { n: 1, icon: "🌱", label: "はじめの一歩", reward: "プロフィールに「サポーター」バッジ表示" },
+                        { n: 3, icon: "🔥", label: "火付け役", reward: "コート登録の優先掲載＋バッジ表示" },
+                        { n: 10, icon: "👑", label: "アンバサダー", reward: "運営から限定ノベルティを進呈" },
+                      ];
+                      const current = [...tiers].reverse().find((t) => invited >= t.n);
+                      const next = tiers.find((t) => invited < t.n);
+                      return (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
+                          {current && (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: `1.5px solid ${T.ball}`, borderRadius: 999, padding: "4px 12px 4px 8px", fontSize: 12, fontWeight: 900 }}>
+                              <span>{current.icon}</span>{current.label}達成
+                            </div>
+                          )}
+                          {next ? (
+                            <div style={{ fontSize: 11, color: "#5E716C", marginTop: current ? 8 : 0, lineHeight: 1.7 }}>
+                              次の特典まであと<b style={{ color: T.court }}>{next.n - invited}人</b>：{next.icon} {next.label}<br />
+                              <span style={{ opacity: 0.85 }}>{next.reward}</span>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 11, color: "#5E716C", marginTop: current ? 8 : 0, lineHeight: 1.7 }}>全ての特典を達成済みです⚡ ありがとうございます</div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    <button style={{ ...S.btn(true), marginTop: 0, flex: 1 }} onClick={openProfileEdit}>プロフィールを編集</button>
+                  <button style={{ ...S.btn(true), marginTop: 12, background: T.ball, color: T.ballInk }} onClick={openPikGlobal}>⚡ ピク活を投稿する</button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button style={{ ...S.btn(false), marginTop: 0, flex: 1 }} onClick={openProfileEdit}>プロフィールを編集</button>
                     <button style={{ ...S.btn(false), marginTop: 0, width: 96 }} onClick={() => { localStorage.removeItem("pk_user"); localStorage.removeItem("pk_jwt"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
                   </div>
 
@@ -2281,6 +2317,22 @@ export default function PickleIkitai() {
             )}
           </div>
         </>
+      )}
+
+      {/* 右下常設の投稿ボタン（Twitter的にどこからでも投稿できる導線） */}
+      {!(sheet || detail || pikPicker || pikForm || authView || profileEdit || legalView || addLineGuide || pwaGuide) && (
+        <button
+          onClick={openPikGlobal}
+          aria-label="ピク活を投稿する"
+          style={{
+            position: "fixed", right: 18, bottom: a2hs ? 92 : 22, zIndex: 80,
+            width: 56, height: 56, borderRadius: 999, border: "none",
+            background: T.ball, color: T.ballInk, fontSize: 24, fontWeight: 900,
+            cursor: "pointer", boxShadow: "0 6px 20px rgba(14,42,43,0.35)",
+            display: "grid", placeItems: "center", fontFamily: FONT,
+          }}>
+          ⚡
+        </button>
       )}
     </div>
   );
