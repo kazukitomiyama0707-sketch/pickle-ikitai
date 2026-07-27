@@ -606,6 +606,7 @@ export default function PickleIkitai() {
   const [authView, setAuthView] = useState(null);
   const [emailForm, setEmailForm] = useState({ email: "", password: "", name: "" });
   const [emailSubmitting, setEmailSubmitting] = useState(false);
+  const [addLineGuide, setAddLineGuide] = useState(false); // 新規登録直後の公式LINE追加誘導
   const [contact, setContact] = useState({ name: "", email: "", message: "", sent: false });
   const timers = useRef([]);
   const idRef = useRef(1);
@@ -629,7 +630,7 @@ export default function PickleIkitai() {
   const areas = ["all", ...new Set(ALL_FACS.filter((f) => f.live).map((f) => f.area))];
   // 開業前(upcoming)の施設は空き枠グリッドの集計対象から除外（誤情報防止）
   // 空き枠は稼働コート（live）のみ。開業前・全国の未連携コートは対象外
-  const visibleFacs = ALL_FACS.filter((f) => f.live && (areaFilter === "all" || f.area === areaFilter));
+  const visibleFacs = ALL_FACS.filter((f) => f.live && (areaFilter === "all" || f.area === areaFilter) && (venueFilter === "all" || (venueFilter === "indoor" ? f.indoor : !f.indoor)));
 
   const windowDays = ALL_DAYS.slice(winStart, winStart + 3);
   const selDay = ALL_DAYS[dayIdx] || ALL_DAYS[0];
@@ -665,7 +666,7 @@ export default function PickleIkitai() {
       g[b.key] = { open, portal, event };
     }
     return g;
-  }, [areaFilter, userFacs, dayIdx]);
+  }, [areaFilter, userFacs, dayIdx, venueFilter]);
 
   const listFacs = useMemo(() => {
     let arr = ALL_FACS
@@ -842,6 +843,7 @@ export default function PickleIkitai() {
       setAuthView(null);
       setEmailForm({ email: "", password: "", name: "" });
       showToast(`ようこそ、${d.user.name}さん⚡`);
+      if (isSignup) setAddLineGuide(true);
     } catch { showToast("通信に失敗しました。時間をおいて再度お試しください"); }
     setEmailSubmitting(false);
   };
@@ -1127,6 +1129,27 @@ export default function PickleIkitai() {
         );
       })()}
 
+      {/* 新規登録直後: 公式LINE友だち追加の誘導 */}
+      {addLineGuide && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 100 }} onClick={() => setAddLineGuide(false)} />
+          <div style={{ ...S.sheet, zIndex: 110, maxWidth: 420 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 14px" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 16, margin: "0 auto", background: "#06C755", display: "grid", placeItems: "center", fontSize: 30 }}>💬</div>
+              <div style={{ fontWeight: 900, fontSize: 18, marginTop: 12 }}>登録ありがとうございます⚡</div>
+              <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.7 }}>新着コート情報・お得な情報は公式LINEでお届けしています。よければ友だち追加してください。</div>
+            </div>
+            <button
+              onClick={() => { window.open(LINE_URL, "_blank"); setAddLineGuide(false); }}
+              style={{ width: "100%", marginTop: 20, padding: "13px 0", borderRadius: 12, border: "none", background: "#06C755", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT }}>
+              公式LINEを友だち追加する
+            </button>
+            <button style={{ ...S.btn(false), marginTop: 8 }} onClick={() => setAddLineGuide(false)}>あとで</button>
+          </div>
+        </>
+      )}
+
       {a2hs && (
         <div style={{ position: "fixed", left: 12, right: 12, bottom: 14, maxWidth: 460, margin: "0 auto", zIndex: 90, background: "#fff", borderRadius: 16, boxShadow: "0 8px 30px rgba(14,42,43,0.28)", border: `1.5px solid ${T.line}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: T.hero1, display: "grid", placeItems: "center" }}>
@@ -1354,6 +1377,12 @@ export default function PickleIkitai() {
               <button key={a} style={S.chip(areaFilter === a)} onClick={() => setAreaFilter(a)}>
                 {a === "all" ? "すべて" : a}
               </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, maxWidth: 360, margin: "8px auto 0" }}>
+            {[["all", "すべて"], ["indoor", "🏠 屋内"], ["outdoor", "☀️ 屋外"]].map(([k, label]) => (
+              <button key={k} style={S.sortBtn(venueFilter === k)} onClick={() => setVenueFilter(k)}>{label}</button>
             ))}
           </div>
 
