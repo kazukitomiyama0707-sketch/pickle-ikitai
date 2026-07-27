@@ -337,8 +337,15 @@ export default {
         }
         const id = uuid();
         const hash = await hashPassword(password);
-        await env.DB.prepare("INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)")
-          .bind(id, email, hash, name, nowISO()).run();
+        // 招待経由の登録なら紐づける（招待者のuser idが存在する場合のみ）
+        const refRaw = String(body.ref || "").trim();
+        let referredBy = null;
+        if (refRaw && refRaw !== id) {
+          const refUser = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(refRaw).first();
+          if (refUser) referredBy = refUser.id;
+        }
+        await env.DB.prepare("INSERT INTO users (id, email, password_hash, name, created_at, referred_by) VALUES (?, ?, ?, ?, ?, ?)")
+          .bind(id, email, hash, name, nowISO(), referredBy).run();
         const jwt = await signJWT({ sub: id, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 90 }, env.JWT_SECRET);
         const user = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id).first();
         return json({ token: jwt, user: profileOf(user, url.origin) }, {}, origin);
@@ -372,7 +379,8 @@ export default {
       if (path === "/api/me") {
         const user = await currentUser(request, env);
         if (!user) return json({ user: null }, {}, origin);
-        return json({ user: profileOf(user, url.origin) }, {}, origin);
+        const invited = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE referred_by = ?").bind(user.id).first();
+        return json({ user: { ...profileOf(user, url.origin), invited: invited?.n || 0 } }, {}, origin);
       }
 
       /* --- プロフィール更新（名前・自己紹介・SNSリンク・アバター） --- */

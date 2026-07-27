@@ -795,6 +795,12 @@ export default function PickleIkitai() {
       .catch(() => {});
   }, []);
 
+  // 招待リンク(?ref=userId)を開いたら、新規登録時に送れるよう保存しておく
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) localStorage.setItem("pk_ref", ref);
+  }, []);
+
   // シェアされたURL(?court=id)を開いたら、該当コートの詳細シートを自動で開く
   useEffect(() => {
     const courtId = new URLSearchParams(window.location.search).get("court");
@@ -841,7 +847,7 @@ export default function PickleIkitai() {
       const res = await fetch(`${API_BASE}/api/auth/${isSignup ? "signup" : "login"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password, name: name.trim() || undefined }),
+        body: JSON.stringify({ email: email.trim(), password, name: name.trim() || undefined, ref: isSignup ? (localStorage.getItem("pk_ref") || undefined) : undefined }),
       });
       const d = await res.json();
       if (!res.ok) { showToast(d.error || "処理に失敗しました"); setEmailSubmitting(false); return; }
@@ -1856,13 +1862,30 @@ export default function PickleIkitai() {
                   )}
                   {/* 統計 */}
                   <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                    {[["ピク活", mine.length], ["コート", courtN], ["⚡もらった", totalLikes]].map(([k, v]) => (
+                    {[["ピク活", mine.length], ["コート", courtN], ["⚡もらった", totalLikes], ["招待", user?.invited || 0]].map(([k, v]) => (
                       <div key={k} style={{ flex: 1, textAlign: "center", background: "#F1F4F0", borderRadius: 12, padding: "10px 0" }}>
                         <div style={{ fontWeight: 900, fontSize: 18, color: T.court }}>{v}</div>
                         <div style={{ fontSize: 10, color: "#8B9B96", marginTop: 1 }}>{k}</div>
                       </div>
                     ))}
                   </div>
+
+                  {/* 招待リンク */}
+                  <div style={{ marginTop: 12, background: "#EFF5EE", borderRadius: 14, padding: "14px 16px" }}>
+                    <div style={{ fontWeight: 900, fontSize: 13 }}>⚡ 友だちを招待する</div>
+                    <div style={{ fontSize: 11, color: "#5E716C", marginTop: 3, lineHeight: 1.6 }}>このリンクから登録した人が「招待」にカウントされます</div>
+                    <button
+                      onClick={() => {
+                        const url = `https://pickleikitai.com/?ref=${user?.id}`;
+                        const text = "ピックルイキタイ - 全国のピックルボールコートがぜんぶ見つかる横断検索サイト";
+                        if (navigator.share) navigator.share({ title: text, url }).catch(() => {});
+                        else { navigator.clipboard?.writeText(url); showToast("招待リンクをコピーしました"); }
+                      }}
+                      style={{ width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 10, border: "none", background: T.court, color: "#fff", fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: FONT }}>
+                      招待リンクをシェア
+                    </button>
+                  </div>
+
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                     <button style={{ ...S.btn(true), marginTop: 0, flex: 1 }} onClick={openProfileEdit}>プロフィールを編集</button>
                     <button style={{ ...S.btn(false), marginTop: 0, width: 96 }} onClick={() => { localStorage.removeItem("pk_user"); localStorage.removeItem("pk_jwt"); setUser(null); setAuthView(null); showToast("ログアウトしました"); }}>ログアウト</button>
