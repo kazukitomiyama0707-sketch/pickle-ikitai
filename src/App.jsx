@@ -1573,7 +1573,7 @@ export default function PickleIkitai() {
                         {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>🚧 {f.openDate ? f.openDate + "オープン" : "開業前"}</span>}
                         {f.memberOnly && <span style={{ fontSize: 10, fontWeight: 800, color: "#5B5B8A", background: "#ECECF7", borderRadius: 6, padding: "2px 6px" }}>会員限定</span>}
                         {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
-                        {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
+                        {pikCount(f.id) > 1 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
                       </div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: "#8B9B96", flexShrink: 0 }}>{f.km.toFixed(1)}km</div>
                     </div>
@@ -1778,7 +1778,7 @@ export default function PickleIkitai() {
                         {f.memberOnly && <span style={{ fontSize: 10, fontWeight: 800, color: "#5B5B8A", background: "#ECECF7", borderRadius: 6, padding: "2px 6px" }}>会員限定</span>}
                     {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
                     {f.live && <span style={{ fontSize: 10, fontWeight: 800, color: T.courtDeep, border: `1px solid ${T.court}`, borderRadius: 6, padding: "1px 5px" }}>空き枠表示</span>}
-                    {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
+                    {pikCount(f.id) > 1 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#8B9B96", flexShrink: 0 }}>{f.km.toFixed(1)}km</div>
                 </div>
