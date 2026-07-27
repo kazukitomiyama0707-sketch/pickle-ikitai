@@ -6,3 +6,6 @@ dist
 .env
 **/.env
 worker/chrome-tmp*/
+
+# Local Netlify folder
+.netlify
