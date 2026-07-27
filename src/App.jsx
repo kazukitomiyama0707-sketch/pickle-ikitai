@@ -249,7 +249,11 @@ const cardPrice = (fac) => {
    混雑・コート状態・できた実績が溜まる。投稿はメモリ内state。
    （本実装ではCloudflare D1に永続化する想定）
    ============================================================ */
-const CROWD = { 1: { icon: "🟢", label: "空いてた" }, 2: { icon: "🟡", label: "ちょうどいい" }, 3: { icon: "🔴", label: "混んでた" } };
+const CROWD = {
+  1: { icon: "🟢", label: "空いてた", color: "#0E9E86", bg: "#E3F5EE" },
+  2: { icon: "🟡", label: "ちょうどいい", color: "#A6790C", bg: "#FBF3D9" },
+  3: { icon: "🔴", label: "混んでた", color: "#D6461F", bg: "#FCE7E0" },
+};
 const NONAME = "名無しピックラー";
 
 // XSS対策: タグ文字を除去しプレーンテキスト化（表示側もReactが自動エスケープ）
@@ -331,12 +335,50 @@ const SEED_PIKKATSU = [
   pk("katsushika", "2026-07-01", "11-13", 2, 2, "口コミ多いだけあって丁寧だった", "", 2),
   pk("kawagoe", "2026-07-05", "21-23", 4, 2, "遠征。夜22:30までやれるの助かる", "エンセイ", 6, "車必須"),
   pk("kawagoe", "2026-06-28", "19-21", 4, 1, "関越で1本。空いててのびのびできた", "", 3),
+  pk("hilton", "2026-07-20", "9-11", 2, 1, "ヒルトン東京の屋外コート。朝は静かでゆったり打てた", "", 3),
+  pk("meiji-park", "2026-07-22", "13-15", 4, 2, "新宿のど真ん中に専用コート。都会にいる感がすごい", "シンジュク民", 11),
+  pk("meiji-park", "2026-07-15", "19-21", 2, 2, "20分体験からそのままゲームに。手ぶらで来れて助かった", "", 4),
+  pk("cesame", "2026-07-18", "15-17", 4, 1, "テニススクール併設。コーチが丁寧に教えてくれた", "", 2),
+  pk("tip-shibuya", "2026-07-21", "19-21", 4, 3, "渋谷の貸しスタジオ利用。仕事帰りに寄れる立地が最高", "シブヤ勢", 7),
+  pk("chuo-sports", "2026-07-17", "11-13", 4, 1, "区施設のバドコート転用。日本橋浜町でこの値段は破格", "", 5, "ライン薄め"),
+  pk("picklr-toyosu", "2026-07-24", "19-21", 4, 3, "月額会員で豊洲の専用コート通い放題。雨でも安心", "トヨス住み", 14),
+  pk("picklr-toyosu", "2026-07-11", "9-11", 2, 1, "朝会員利用。空いてて球出し練習しやすい", "", 4),
+  pk("vip-toyocho", "2026-07-19", "21-23", 4, 2, "東陽町の屋内。夜遅くまでやれて仕事終わりに丁度いい", "", 3),
+  pk("katsushika", "2026-07-23", "9-11", 4, 1, "平日貸切枠。朝から気持ちよく体動かせた", "", 2),
+  pk("ocean-tsurumi", "2026-07-16", "13-15", 4, 2, "鶴見のデコターフ屋外2面。用具レンタルで手ぶら参加できた", "ツルミン", 6),
+  pk("raym-kawaguchi", "2026-07-10", "15-17", 4, 2, "川口のテニスセンター。金曜講習会もやってて雰囲気良い", "", 3),
+  pk("bellwood-matsudo", "2026-07-13", "11-13", 2, 1, "松戸の専用屋外2面。できたばかりで綺麗だった", "マツド", 5),
+  pk("impact-tsukuba", "2026-07-25", "9-11", 4, 1, "つくば初の本格専用4面。平日料金が安くて助かる", "", 4, "朝露で滑りやすい"),
+  pk("maebashi-pc", "2026-07-14", "19-21", 4, 2, "高崎の屋内3面。群馬県内で専用コートあるの貴重", "グンマー", 8),
+  pk("prex-tochigi", "2026-07-09", "15-17", 2, 1, "さくら市の老舗屋外コート。スクール生も多く活気ある", "", 3),
+  pk("dpc-kobe", "2026-07-26", "19-21", 4, 3, "新長田の屋内5面、日本最大級というだけあって広い", "コウベ勢", 19),
+  pk("dpc-kobe", "2026-07-12", "13-15", 2, 2, "米ブランド提携のコートで雰囲気が本格的", "", 7),
+  pk("pb-base-osaka", "2026-07-20", "9-11", 4, 1, "堺の屋外6面、西日本最多だけあって朝から賑わってた", "サカイ", 9),
+  pk("pb-one-osaka", "2026-07-06", "21-23", 2, 1, "東淀川、平日半額キャンペーンで気軽に行けた", "", 4),
+  pk("kyoto-ptc", "2026-07-17", "13-15", 4, 2, "伏見の屋内4面。会員は用具レンタル無料が地味に嬉しい", "キョウト", 5),
+  pk("sasashima", "2026-06-29", "15-17", 4, 2, "名古屋初の屋外専用。オープン直後で真新しかった", "", 3),
+  pk("nagoya-pb-base", "2026-07-08", "19-21", 2, 1, "名古屋の屋内専用。夜でも明るくて安心して打てた", "", 2),
+  pk("marin-handa", "2026-07-19", "11-13", 4, 2, "半田の愛知県初アウトドア。海が近くて気持ちいい", "ハンダ", 6),
+  pk("pivole-fukuoka", "2026-07-22", "15-17", 4, 2, "九州初の屋内4面。シャワー完備でそのまま外出できた", "フクオカ", 10),
+  pk("tagawa-tc", "2026-07-05", "9-11", 2, 1, "田川の屋外専用4面。ハードコート常設で雨上がりも安心", "", 3),
+  pk("pb-kumamoto", "2026-07-11", "19-21", 2, 1, "宇城の県内初コート。喫茶併設で試合後にひと休みできた", "クマモト", 4),
+  pk("nfl-tokushima", "2026-07-24", "13-15", 4, 2, "徳島初の屋内4面。本開業で初回無料体験に参加した", "", 5),
+  pk("jiyu-marugame", "2026-07-14", "21-23", 2, 1, "ネットカフェ内の常設コート。深夜まで使えるのが便利", "", 2),
+  pk("neo-sapporo", "2026-07-21", "9-11", 4, 2, "白石区、24時間営業でシフト明けに朝活できた", "サッポロ", 8),
+  pk("rusutsu", "2026-07-25", "13-15", 6, 3, "道内初の専用8面、観覧席もあって夏の大会気分", "ルスツ勢", 13),
+  pk("asarigawa", "2026-07-15", "15-17", 4, 1, "小樽の温泉ホテル併設。宿泊者は1h無料で得した気分", "オタル", 4),
+  pk("tokyu-hamanako", "2026-07-18", "11-13", 4, 2, "浜名湖リゾート、USA公認コートで旅行がてら満喫", "ハマナコ", 7),
+  pk("tokyu-tateshina", "2026-06-30", "13-15", 2, 1, "蓼科の高原リゾート。甲信越初の公認コートで涼しかった", "", 3),
+  pk("pica-fujiyama", "2026-07-16", "15-17", 4, 2, "河口湖の全天候型。富士山を見ながらプレーできた", "フジ", 9),
+  pk("nemu-resort", "2026-07-09", "9-11", 4, 1, "伊勢志摩国立公園内。朝の澄んだ空気の中でプレー", "", 3),
+  pk("halekulani-okinawa", "2026-07-23", "15-17", 2, 1, "恩納村のラグジュアリーリゾート。宿泊者限定で贅沢な1面", "オキナワ", 15),
+  pk("nagasaki-stadium", "2026-07-13", "19-21", 4, 2, "屋上5面、アプリ予約で年中無休なのが便利", "ナガサキ", 6),
 ];
 
 const PikCard = ({ k, onLike, facName, onFac }) => {
   const c = CROWD[k.crowd] || CROWD[2];
   return (
-    <div style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: "10px 12px", marginTop: 8, background: "#fff" }}>
+    <div style={{ border: `1px solid ${T.line}`, borderLeft: `3px solid ${c.color}`, borderRadius: 12, padding: "11px 13px", marginTop: 8, background: "#fff", boxShadow: "0 1px 3px rgba(14,42,43,0.06)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 800 }}>{k.nickname || NONAME}</div>
         <div style={{ fontSize: 11, color: "#8B9B96" }}>{k.playedAt} ・ {k.timeBand}時</div>
@@ -344,14 +386,14 @@ const PikCard = ({ k, onLike, facName, onFac }) => {
       {facName && (
         <button onClick={onFac} style={{ marginTop: 4, padding: 0, border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 12, cursor: "pointer", textAlign: "left" }}>📍 {facName}</button>
       )}
-      <div style={{ fontSize: 12, color: "#5E716C", marginTop: 5, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <span>{c.icon} {c.label}</span>
-        <span>👥 {k.partySize}人</span>
-        {k.courtCondition ? <span>📝 {k.courtCondition}</span> : null}
+      <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: c.bg, color: c.color, fontWeight: 800, fontSize: 11, borderRadius: 999, padding: "3px 10px" }}>{c.icon} {c.label}</span>
+        <span style={{ fontSize: 12, color: "#5E716C" }}>👥 {k.partySize}人</span>
+        {k.courtCondition ? <span style={{ fontSize: 12, color: "#5E716C" }}>📝 {k.courtCondition}</span> : null}
       </div>
-      {k.comment ? <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{k.comment}</div> : null}
+      {k.comment ? <div style={{ fontSize: 13, marginTop: 7, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{k.comment}</div> : null}
       {k.photo ? <img src={k.photo} alt="" loading="lazy" style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 10, marginTop: 8, display: "block" }} /> : null}
-      <button onClick={onLike} style={{ marginTop: 8, padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ballInk }}>⚡ {k.likes}</button>
+      <button onClick={onLike} style={{ marginTop: 9, padding: "5px 12px", borderRadius: 999, border: "none", background: T.ball, fontWeight: 900, fontSize: 12, cursor: "pointer", color: T.ballInk }}>⚡ {k.likes}</button>
     </div>
   );
 };
@@ -1918,22 +1960,33 @@ export default function PickleIkitai() {
                         { n: 3, icon: "🔥", label: "火付け役", reward: "コート登録の優先掲載＋バッジ表示" },
                         { n: 10, icon: "👑", label: "アンバサダー", reward: "運営から限定ノベルティを進呈" },
                       ];
-                      const current = [...tiers].reverse().find((t) => invited >= t.n);
                       const next = tiers.find((t) => invited < t.n);
                       return (
                         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
-                          {current && (
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: `1.5px solid ${T.ball}`, borderRadius: 999, padding: "4px 12px 4px 8px", fontSize: 12, fontWeight: 900 }}>
-                              <span>{current.icon}</span>{current.label}達成
-                            </div>
-                          )}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {tiers.map((t) => {
+                              const achieved = invited >= t.n;
+                              return (
+                                <div key={t.n} style={{ display: "flex", alignItems: "center", gap: 10, opacity: achieved ? 1 : 0.5 }}>
+                                  <div style={{ width: 30, height: 30, borderRadius: 999, background: achieved ? T.ball : "#fff", border: `1.5px solid ${achieved ? T.ball : T.line}`, display: "grid", placeItems: "center", fontSize: 14, flexShrink: 0 }}>{t.icon}</div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 900 }}>{t.label} <span style={{ fontWeight: 700, color: "#8B9B96" }}>（{t.n}人）</span></div>
+                                    <div style={{ fontSize: 10.5, color: "#5E716C", marginTop: 1, lineHeight: 1.4 }}>{t.reward}</div>
+                                  </div>
+                                  {achieved && <span style={{ fontSize: 13, fontWeight: 900, color: T.court, flexShrink: 0 }}>✓</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
                           {next ? (
-                            <div style={{ fontSize: 11, color: "#5E716C", marginTop: current ? 8 : 0, lineHeight: 1.7 }}>
-                              次の特典まであと<b style={{ color: T.court }}>{next.n - invited}人</b>：{next.icon} {next.label}<br />
-                              <span style={{ opacity: 0.85 }}>{next.reward}</span>
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ height: 6, borderRadius: 999, background: T.line, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${Math.min(100, (invited / next.n) * 100)}%`, background: T.court, borderRadius: 999 }} />
+                              </div>
+                              <div style={{ fontSize: 11, color: "#5E716C", marginTop: 6 }}>次の特典まであと<b style={{ color: T.court }}>{next.n - invited}人</b></div>
                             </div>
                           ) : (
-                            <div style={{ fontSize: 11, color: "#5E716C", marginTop: current ? 8 : 0, lineHeight: 1.7 }}>全ての特典を達成済みです⚡ ありがとうございます</div>
+                            <div style={{ fontSize: 11, color: "#5E716C", marginTop: 12, lineHeight: 1.7 }}>全ての特典を達成済みです⚡ ありがとうございます</div>
                           )}
                         </div>
                       );
