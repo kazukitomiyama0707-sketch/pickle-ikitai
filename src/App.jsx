@@ -1284,8 +1284,8 @@ export default function PickleIkitai() {
   const IkitaiBtn = ({ fac, floating = false }) => {
     const on = ikitai.has(fac.id);
     const base = floating
-      ? { position: "absolute", top: 8, left: 8, zIndex: 3, padding: "5px 11px 5px 8px" }
-      : { padding: "8px 14px 8px 11px" };
+      ? { position: "absolute", top: 8, left: 8, zIndex: 3, padding: "10px 13px 10px 10px", minHeight: 40 }
+      : { padding: "11px 15px 11px 12px", minHeight: 40 };
     return (
       <button
         onClick={(e) => toggleIkitai(fac, e)}
