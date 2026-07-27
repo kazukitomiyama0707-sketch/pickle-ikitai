@@ -614,6 +614,7 @@ export default function PickleIkitai() {
   });
   const [onlyIkitai, setOnlyIkitai] = useState(false);
   const [venueFilter, setVenueFilter] = useState("all"); // all | indoor | outdoor
+  const [listLimit, setListLimit] = useState(24); // コート一覧の表示件数（続きを見るで拡張）
   // 「ホーム画面に追加」誘導（一度閉じたら二度と出さない・スクロール後に控えめに）
   const [a2hs, setA2hs] = useState(false);
   const [pwaGuide, setPwaGuide] = useState(false); // アプリ追加の手順モーダル
@@ -719,6 +720,9 @@ export default function PickleIkitai() {
     arr.sort((a, b) => (sortKey === "price" ? minCourtPrice(a) - minCourtPrice(b) : a.km - b.km));
     return arr;
   }, [catFilter, sortKey, userFacs, origin, onlyIkitai, ikitai, venueFilter]);
+
+  // 絞り込み条件が変わったら表示件数をリセット
+  useEffect(() => { setListLimit(24); }, [catFilter, sortKey, onlyIkitai, venueFilter]);
 
   // イベント/レッスンは全施設のplansから自動集計
   const eventPlans = useMemo(() => {
@@ -1598,7 +1602,7 @@ export default function PickleIkitai() {
             </div>
           ) : (
           <div className="cardGrid">
-            {listFacs.map((f) => (
+            {listFacs.slice(0, listLimit).map((f) => (
               <button key={f.id} style={{ ...S.facCard, cursor: "pointer", borderColor: f.userSubmitted ? "#C9BBEE" : T.line, display: "block" }} onClick={() => openDetail(f)}>
                 <div style={{ marginBottom: 10, position: "relative" }}>
                   <CourtImage fac={f} height={118} rounded={11} />
@@ -1627,6 +1631,13 @@ export default function PickleIkitai() {
               </button>
             ))}
           </div>
+          )}
+          {listFacs.length > listLimit && (
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <button style={{ ...S.btn(false), maxWidth: 280, margin: "0 auto" }} onClick={() => setListLimit((n) => n + 24)}>
+                続きを見る（残り{listFacs.length - listLimit}件）
+              </button>
+            </div>
           )}
           <div style={{ fontSize: 11, color: "#AEBCB7", textAlign: "center", marginTop: 16 }}>
             距離は{geoState === "granted" ? "現在地" : "渋谷"}起点の直線距離 ・ 現在 {ALL_FACS.length} コート掲載中
