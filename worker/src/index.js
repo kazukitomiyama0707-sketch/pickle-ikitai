@@ -157,22 +157,31 @@ const b64urlDecode = (s) => {
   return atob(s + "=".repeat((4 - (s.length % 4)) % 4));
 };
 
-/* ---------------- パスワードハッシュ (PBKDF2-SHA256, Web Crypto標準API) ---------------- */
-async function hashPassword(password) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
+/* ---------------- パスワードハッシュ (PBKDF2-SHA256, Web Crypto標準API) ----------------
+ * Cloudflare Workers(webcrypto)はPBKDF2のイテレーション数が10万回が実装上の上限
+ * （それ以上はNotSupportedErrorで例外になる）。OWASP推奨には届かないが環境の制約。
+ * イテレーション数を保存形式に含めるので、将来引き上げても既存パスワードの検証は壊れない。
+ */
+const PBKDF2_ITERATIONS = 100000;
+async function deriveBits(password, salt, iterations) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
-  return `${b64url(salt)}.${b64url(bits)}`;
+  return crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, keyMaterial, 256);
+}
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const bits = await deriveBits(password, salt, PBKDF2_ITERATIONS);
+  return `${PBKDF2_ITERATIONS}.${b64url(salt)}.${b64url(bits)}`;
 }
 async function verifyPassword(password, stored) {
   try {
-    const [saltB64, hashB64] = String(stored).split(".");
-    if (!saltB64 || !hashB64) return false;
+    const parts = String(stored).split(".");
+    // 旧形式(salt.hash, 100000回固定)との互換も見る
+    const [iterStr, saltB64, hashB64] = parts.length === 3 ? parts : [String(100000), parts[0], parts[1]];
+    const iterations = parseInt(iterStr, 10);
+    if (!saltB64 || !hashB64 || !Number.isFinite(iterations)) return false;
     const salt = Uint8Array.from(b64urlDecode(saltB64), (c) => c.charCodeAt(0));
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, 256);
+    const bits = await deriveBits(password, salt, iterations);
     return b64url(bits) === hashB64;
   } catch { return false; }
 }
@@ -317,8 +326,15 @@ export default {
         const name = sanitize(body.name || "ピックラー", 20).trim() || "ピックラー";
         if (!isValidEmail(email)) return json({ error: "メールアドレスの形式が正しくありません" }, { status: 400 }, origin);
         if (password.length < 8) return json({ error: "パスワードは8文字以上にしてください" }, { status: 400 }, origin);
+        // 同一メールへの連続試行を制限（列挙・スパム対策。login_attemptsを共用）
+        const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const recent = await env.DB.prepare("SELECT COUNT(*) AS n FROM login_attempts WHERE email = ? AND attempted_at > ?").bind(email, windowStart).first();
+        if ((recent?.n || 0) >= 5) return json({ error: "試行回数が多すぎます。15分ほど時間をおいてお試しください" }, { status: 429 }, origin);
         const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
-        if (existing) return json({ error: "このメールアドレスは既に登録されています" }, { status: 409 }, origin);
+        if (existing) {
+          await env.DB.prepare("INSERT INTO login_attempts (email, attempted_at) VALUES (?, ?)").bind(email, nowISO()).run();
+          return json({ error: "このメールアドレスは既に登録されています" }, { status: 409 }, origin);
+        }
         const id = uuid();
         const hash = await hashPassword(password);
         await env.DB.prepare("INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)")
@@ -334,10 +350,20 @@ export default {
         const email = String(body.email || "").trim().toLowerCase();
         const password = String(body.password || "");
         if (!isValidEmail(email) || !password) return json({ error: "メールアドレスとパスワードを入力してください" }, { status: 400 }, origin);
+
+        // ブルートフォース対策: 直近15分で5回失敗していたらロック
+        const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const recent = await env.DB.prepare("SELECT COUNT(*) AS n FROM login_attempts WHERE email = ? AND attempted_at > ?").bind(email, windowStart).first();
+        if ((recent?.n || 0) >= 5) return json({ error: "試行回数が多すぎます。15分ほど時間をおいてお試しください" }, { status: 429 }, origin);
+
         const user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
-        if (!user || !user.password_hash) return json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 }, origin);
-        const ok = await verifyPassword(password, user.password_hash);
-        if (!ok) return json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 }, origin);
+        const ok = user?.password_hash ? await verifyPassword(password, user.password_hash) : false;
+        if (!ok) {
+          await env.DB.prepare("INSERT INTO login_attempts (email, attempted_at) VALUES (?, ?)").bind(email, nowISO()).run();
+          return json({ error: "メールアドレスまたはパスワードが違います" }, { status: 401 }, origin);
+        }
+        // ログイン成功: この email の失敗履歴をクリア
+        await env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(email).run();
         const jwt = await signJWT({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 90 }, env.JWT_SECRET);
         return json({ token: jwt, user: profileOf(user, url.origin) }, {}, origin);
       }
