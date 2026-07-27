@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="hsl(84, 46%, 34%)" />
+      <stop offset="100%" stop-color="hsl(84, 42%, 22%)" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)" />
+  <g transform="rotate(15 600 315)"><line x1="-240" y1="0" x2="-20" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="96" y1="0" x2="316" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="432" y1="0" x2="652" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="767.9999999999999" y1="0" x2="987.9999999999999" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="1104" y1="0" x2="1324" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /></g>
+  <circle cx="468.52093141525984" cy="201.30734126502648" r="71.80647040251642" fill="none" stroke="hsl(84, 40%, 46%)" stroke-width="10" opacity="0.55" />
+  <circle cx="984.8457737267017" cy="346.7760355237406" r="37.03846498019993" fill="hsl(267, 70%, 62%)" opacity="0.92" />
+  <circle cx="974.4750035322458" cy="335.6644960296806" r="4.074231147821993" fill="rgba(0,0,0,0.28)" />
+  <circle cx="995.9573132207618" cy="337.5164192786906" r="4.074231147821993" fill="rgba(0,0,0,0.28)" />
+  <circle cx="984.8457737267017" cy="359.73949826681053" r="4.074231147821993" fill="rgba(0,0,0,0.28)" />
+</svg>

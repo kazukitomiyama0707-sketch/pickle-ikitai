@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="hsl(224, 46%, 34%)" />
+      <stop offset="100%" stop-color="hsl(224, 42%, 22%)" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)" />
+  <g transform="rotate(-19 600 315)"><line x1="-240" y1="0" x2="-20" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="-30" y1="0" x2="190" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="180" y1="0" x2="400" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="390" y1="0" x2="610" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="600" y1="0" x2="820" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="810" y1="0" x2="1030" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="1020" y1="0" x2="1240" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /><line x1="1230" y1="0" x2="1450" y2="630" stroke="rgba(255,255,255,0.10)" stroke-width="26" /></g>
+  <circle cx="773.3023170568049" cy="249.52345730317757" r="106.91570329014212" fill="none" stroke="hsl(224, 40%, 46%)" stroke-width="10" opacity="0.55" />
+  <circle cx="1004.2938217520714" cy="145.6622625212185" r="27.33964107464999" fill="hsl(43, 70%, 62%)" opacity="0.92" />
+  <circle cx="996.6387222511694" cy="137.4603701988235" r="3.007360518211499" fill="rgba(0,0,0,0.28)" />
+  <circle cx="1012.4957140744664" cy="138.827352252556" r="3.007360518211499" fill="rgba(0,0,0,0.28)" />
+  <circle cx="1004.2938217520714" cy="155.231136897346" r="3.007360518211499" fill="rgba(0,0,0,0.28)" />
+</svg>
