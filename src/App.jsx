@@ -299,7 +299,7 @@ const freshness = (offset) => (offset <= 7 ? "15分毎更新" : offset <= 30 ? "
 
 /* プラン種別バッジ定義 */
 const KIND = {
-  court: { label: "コート貸切", icon: "🎾", color: T.court, bg: "#E7F2F1" },
+  court: { label: "コート貸切", icon: "🎾", color: T.courtDeep, bg: "#E7F2F1" },
   event: { label: "体験会", icon: "🎪", color: "#8A4B2D", bg: "#F9EBE2" },
   lesson: { label: "レッスン", icon: "📖", color: "#5B5B8A", bg: "#ECECF7" },
 };
@@ -545,7 +545,7 @@ const PikCard = ({ k, onLike, facName, onFac }) => {
         <div style={{ fontSize: 11, color: "#8B9B96" }}>{k.playedAt} ・ {k.timeBand}時</div>
       </div>
       {facName && (
-        <button onClick={onFac} style={{ marginTop: 4, padding: 0, border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 12, cursor: "pointer", textAlign: "left" }}>📍 {facName}</button>
+        <button onClick={onFac} style={{ marginTop: 4, padding: 0, border: "none", background: "none", color: T.courtDeep, fontWeight: 800, fontSize: 12, cursor: "pointer", textAlign: "left" }}>📍 {facName}</button>
       )}
       <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: c.bg, color: c.color, fontWeight: 800, fontSize: 11, borderRadius: 999, padding: "3px 10px" }}>{c.icon} {c.label}</span>
@@ -1240,7 +1240,7 @@ export default function PickleIkitai() {
     navBtn: (disabled) => ({ width: 44, padding: "12px 0", borderRadius: 14, border: "none", background: T.white, color: disabled ? "#C9D3CE" : T.ink, fontWeight: 900, fontSize: 16, boxShadow: `inset 0 0 0 1.5px ${T.line}` }),
     dayBtn: (on, d) => ({ flex: 1, padding: "9px 0", borderRadius: 14, border: "none", background: on ? T.ball : T.white, color: on ? T.ballInk : d.isSun ? "#C0392B" : d.isSat ? "#2E6BA8" : T.ink, fontWeight: 800, fontSize: 15, boxShadow: on ? "none" : `inset 0 0 0 1.5px ${T.line}` }),
     row: { display: "flex", borderTop: `1px solid ${T.line}` },
-    bandLabel: { width: 64, padding: "16px 0", textAlign: "center", fontSize: 13, fontWeight: 800, color: T.court, background: "#EFF5EE" },
+    bandLabel: { width: 64, padding: "16px 0", textAlign: "center", fontSize: 13, fontWeight: 800, color: T.courtDeep, background: "#EFF5EE" },
     cell: { flex: 1, padding: "12px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer" },
     openBadge: { display: "flex", alignItems: "center", gap: 5, fontWeight: 900, fontSize: 16 },
     portalBadge: { fontSize: 11, fontWeight: 700, color: "#5E716C", border: `1.5px dashed #B8C4BF`, borderRadius: 8, padding: "1px 7px" },
@@ -1258,7 +1258,7 @@ export default function PickleIkitai() {
     segRow: { display: "flex", gap: 8, marginTop: 6 },
     seg: (on) => ({ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", fontWeight: 800, fontSize: 13, background: on ? T.court : "#EFF2EF", color: on ? T.white : T.ink }),
     secTitle: { textAlign: "center", marginBottom: 8 },
-    secKicker: { display: "inline-block", fontSize: 12, fontWeight: 900, letterSpacing: "0.25em", color: T.court, marginBottom: 8 },
+    secKicker: { display: "inline-block", fontSize: 12, fontWeight: 900, letterSpacing: "0.25em", color: T.courtDeep, marginBottom: 8 },
     secH: { fontSize: "clamp(24px, 4.5vw, 34px)", fontWeight: 900, fontStyle: "italic", transform: "rotate(-1.5deg)", display: "inline-flex", alignItems: "center", gap: 8 },
   };
 
@@ -1541,7 +1541,7 @@ export default function PickleIkitai() {
           <div className="sectionInner">
             <SectionHead kicker="SEARCH" title={`「${submittedQuery}」の検索結果`} />
             <div style={{ textAlign: "center", marginTop: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: T.court }}>{searchFacs.length}件</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: T.courtDeep }}>{searchFacs.length}件</span>
               <button onClick={() => { setSubmittedQuery(""); setQuery(""); }} style={{ marginLeft: 12, border: "none", background: "none", color: "#8B9B96", fontWeight: 800, fontSize: 12, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>クリア</button>
             </div>
 
@@ -1580,7 +1580,7 @@ export default function PickleIkitai() {
                     <div style={{ fontWeight: 900, fontSize: 15, marginTop: 6 }}>{f.name}</div>
                     <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
                       {f.area} ・ <VenueTag indoor={f.indoor} size={12} /> ・ {hasCourt(f)
-                        ? <span style={{ fontWeight: 800, color: T.court }}>{cardPrice(f)}</span>
+                        ? <span style={{ fontWeight: 800, color: T.courtDeep }}>{cardPrice(f)}</span>
                         : <span style={{ fontWeight: 800, color: "#8A4B2D" }}>体験会のみ</span>}
                     </div>
                     <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 3 }}>{f.note}</div>
@@ -1675,7 +1675,7 @@ export default function PickleIkitai() {
               <button key={mo.m} style={S.monthChip(curMonth === mo.m)} onClick={() => jumpTo(mo.firstIdx)}>{mo.m}月</button>
             ))}
             {winStart > 0 && (
-              <button style={{ ...S.monthChip(false), color: T.court }} onClick={() => jumpTo(0)}>↩ 今日</button>
+              <button style={{ ...S.monthChip(false), color: T.courtDeep }} onClick={() => jumpTo(0)}>↩ 今日</button>
             )}
           </div>
 
@@ -1739,7 +1739,7 @@ export default function PickleIkitai() {
           </div>
           <div style={{ textAlign: "center", fontSize: 11, color: "#8B9B96", marginTop: 8 }}>
             {geoState === "granted"
-              ? <>📍 現在地から近い順で表示中 ・ <button onClick={() => { setOrigin(HOME); setGeoState("idle"); }} style={{ border: "none", background: "none", color: T.court, fontWeight: 800, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>解除</button></>
+              ? <>📍 現在地から近い順で表示中 ・ <button onClick={() => { setOrigin(HOME); setGeoState("idle"); }} style={{ border: "none", background: "none", color: T.courtDeep, fontWeight: 800, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: FONT }}>解除</button></>
               : geoState === "denied"
               ? "位置情報が取れないため、渋谷を基準に表示しています"
               : "いまは渋谷が基準。「近い順」をタップすると現在地から並べ替えます"}
@@ -1777,7 +1777,7 @@ export default function PickleIkitai() {
                     {f.upcoming && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#E4572E", borderRadius: 6, padding: "2px 6px" }}>🚧 {f.openDate ? f.openDate + "オープン" : "開業前"}</span>}
                         {f.memberOnly && <span style={{ fontSize: 10, fontWeight: 800, color: "#5B5B8A", background: "#ECECF7", borderRadius: 6, padding: "2px 6px" }}>会員限定</span>}
                     {f.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
-                    {f.live && <span style={{ fontSize: 10, fontWeight: 800, color: T.court, border: `1px solid ${T.court}`, borderRadius: 6, padding: "1px 5px" }}>空き枠表示</span>}
+                    {f.live && <span style={{ fontSize: 10, fontWeight: 800, color: T.courtDeep, border: `1px solid ${T.court}`, borderRadius: 6, padding: "1px 5px" }}>空き枠表示</span>}
                     {pikCount(f.id) > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: "#EEF6C8", borderRadius: 6, padding: "2px 6px" }}>⚡ピク活{pikCount(f.id)}件</span>}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#8B9B96", flexShrink: 0 }}>{f.km.toFixed(1)}km</div>
@@ -1785,7 +1785,7 @@ export default function PickleIkitai() {
                 <div style={{ fontWeight: 900, fontSize: 15, marginTop: 6 }}>{f.name}</div>
                 <div style={{ fontSize: 12, color: "#5E716C", marginTop: 3 }}>
                   {f.area} ・ <VenueTag indoor={f.indoor} size={12} /> ・ {hasCourt(f)
-                    ? <span style={{ fontWeight: 800, color: T.court }}>{cardPrice(f)}</span>
+                    ? <span style={{ fontWeight: 800, color: T.courtDeep }}>{cardPrice(f)}</span>
                     : <span style={{ fontWeight: 800, color: "#8A4B2D" }}>体験会のみ</span>}
                 </div>
                 <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 3 }}>{f.note}</div>
@@ -1824,7 +1824,7 @@ export default function PickleIkitai() {
                     <div style={{ fontWeight: 900, fontSize: 15 }}>{p.name}</div>
                   </div>
                   <div style={{ fontSize: 13, marginTop: 5, color: "#5E716C", fontWeight: 700 }}>{f.name}</div>
-                  <div style={{ fontSize: 13, marginTop: 4, color: T.court, fontWeight: 800 }}>
+                  <div style={{ fontSize: 13, marginTop: 4, color: T.courtDeep, fontWeight: 800 }}>
                     {planPrice(p)}{p.capacity ? ` ・ 定員〜${p.capacity}名` : ""}
                   </div>
                   <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 3 }}>{f.area}</div>
@@ -1953,8 +1953,8 @@ export default function PickleIkitai() {
 
                 <button type="submit" style={{ ...S.btn(true), marginTop: 18 }}>この内容で送信する</button>
                 <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 10, textAlign: "center", lineHeight: 1.8 }}>
-                  送信により<button type="button" onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・
-                  <button type="button" onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします<br />
+                  送信により<button type="button" onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.courtDeep, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・
+                  <button type="button" onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.courtDeep, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします<br />
                   メールでも受付: {CONTACT_EMAIL}
                 </div>
               </form>
@@ -2120,7 +2120,7 @@ export default function PickleIkitai() {
                   <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                     {[["ピク活", mine.length], ["コート", courtN], ["⚡もらった", totalLikes], ["招待", user?.invited || 0]].map(([k, v]) => (
                       <div key={k} style={{ flex: 1, textAlign: "center", background: "#F1F4F0", borderRadius: 12, padding: "10px 0" }}>
-                        <div style={{ fontWeight: 900, fontSize: 18, color: T.court }}>{v}</div>
+                        <div style={{ fontWeight: 900, fontSize: 18, color: T.courtDeep }}>{v}</div>
                         <div style={{ fontSize: 10, color: "#8B9B96", marginTop: 1 }}>{k}</div>
                       </div>
                     ))}
@@ -2160,7 +2160,7 @@ export default function PickleIkitai() {
                                     <div style={{ fontSize: 12, fontWeight: 900 }}>{t.label} <span style={{ fontWeight: 700, color: "#8B9B96" }}>（{t.n}人）</span></div>
                                     <div style={{ fontSize: 10.5, color: "#5E716C", marginTop: 1, lineHeight: 1.4 }}>{t.reward}</div>
                                   </div>
-                                  {achieved && <span style={{ fontSize: 13, fontWeight: 900, color: T.court, flexShrink: 0 }}>✓</span>}
+                                  {achieved && <span style={{ fontSize: 13, fontWeight: 900, color: T.courtDeep, flexShrink: 0 }}>✓</span>}
                                 </div>
                               );
                             })}
@@ -2170,7 +2170,7 @@ export default function PickleIkitai() {
                               <div style={{ height: 6, borderRadius: 999, background: T.line, overflow: "hidden" }}>
                                 <div style={{ height: "100%", width: `${Math.min(100, (invited / next.n) * 100)}%`, background: T.court, borderRadius: 999 }} />
                               </div>
-                              <div style={{ fontSize: 11, color: "#5E716C", marginTop: 6 }}>次の特典まであと<b style={{ color: T.court }}>{next.n - invited}人</b></div>
+                              <div style={{ fontSize: 11, color: "#5E716C", marginTop: 6 }}>次の特典まであと<b style={{ color: T.courtDeep }}>{next.n - invited}人</b></div>
                             </div>
                           ) : (
                             <div style={{ fontSize: 11, color: "#5E716C", marginTop: 12, lineHeight: 1.7 }}>全ての特典を達成済みです⚡ ありがとうございます</div>
@@ -2252,7 +2252,7 @@ export default function PickleIkitai() {
                 </button>
 
                 <div style={{ fontSize: 10, color: "#AEBCB7", marginTop: 12, textAlign: "center", lineHeight: 1.8 }}>
-                  {authView === "signup" && <>登録により<button onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・<button onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.court, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします</>}
+                  {authView === "signup" && <>登録により<button onClick={() => setLegalView("terms")} style={{ border: "none", background: "none", padding: 0, color: T.courtDeep, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>利用規約</button>・<button onClick={() => setLegalView("privacy")} style={{ border: "none", background: "none", padding: 0, color: T.courtDeep, fontWeight: 800, fontSize: 10, cursor: "pointer" }}>プライバシーポリシー</button>に同意したものとみなします</>}
                 </div>
               </>
             )}
@@ -2270,7 +2270,7 @@ export default function PickleIkitai() {
             <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 3 }}>最終更新: {isoOf(new Date())} ・ 運営: {OPERATOR}</div>
             {(legalView === "terms" ? TERMS : PRIVACY).map(([h, b]) => (
               <div key={h} style={{ marginTop: 16 }}>
-                <div style={{ fontWeight: 900, fontSize: 13, color: T.court }}>{h}</div>
+                <div style={{ fontWeight: 900, fontSize: 13, color: T.courtDeep }}>{h}</div>
                 <div style={{ fontSize: 13, color: "#455B57", marginTop: 5, lineHeight: 1.9 }}>{b}</div>
               </div>
             ))}
@@ -2297,7 +2297,7 @@ export default function PickleIkitai() {
               {profileEdit.avatar
                 ? <img src={profileEdit.avatar} alt="" style={{ width: 64, height: 64, borderRadius: 999, objectFit: "cover" }} />
                 : <div style={{ width: 64, height: 64, borderRadius: 999, background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 26, display: "grid", placeItems: "center" }}>{(profileEdit.name || "?").slice(0, 1)}</div>}
-              <label style={{ fontSize: 13, fontWeight: 800, color: T.court, cursor: "pointer" }}>
+              <label style={{ fontSize: 13, fontWeight: 800, color: T.courtDeep, cursor: "pointer" }}>
                 画像を選ぶ
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
@@ -2524,7 +2524,7 @@ export default function PickleIkitai() {
                       <span style={{ fontSize: 10, fontWeight: 800, color: k.color, background: k.bg, borderRadius: 6, padding: "2px 6px" }}>{k.icon} {k.label}</span>
                       <span style={{ fontWeight: 800, fontSize: 13 }}>{p.name}</span>
                     </div>
-                    <div style={{ fontSize: 13, color: T.court, fontWeight: 800, marginTop: 3 }}>
+                    <div style={{ fontSize: 13, color: T.courtDeep, fontWeight: 800, marginTop: 3 }}>
                       {planPrice(p)}<span style={{ color: "#8B9B96", fontWeight: 600 }}>{p.capacity ? ` ・ 定員〜${p.capacity}名` : ""}</span>
                     </div>
                   </div>
