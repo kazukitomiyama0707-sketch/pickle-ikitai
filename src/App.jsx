@@ -795,6 +795,14 @@ export default function PickleIkitai() {
       .catch(() => {});
   }, []);
 
+  // シェアされたURL(?court=id)を開いたら、該当コートの詳細シートを自動で開く
+  useEffect(() => {
+    const courtId = new URLSearchParams(window.location.search).get("court");
+    if (!courtId) return;
+    const f = ALL_FACS.find((x) => x.id === courtId);
+    if (f) { setDetail(f); setDetailPikLimit(3); }
+  }, []);
+
   const authToken = () => localStorage.getItem("pk_jwt");
 
   const openProfileEdit = () => setProfileEdit({
@@ -1065,6 +1073,46 @@ export default function PickleIkitai() {
         <span style={{ fontSize: 13, transform: on ? "scale(1.15)" : "none", transition: "transform 0.12s ease" }}>{on ? "⚡" : "＋"}</span>
         {on ? "イキタイ済み" : "イキタイ"}
       </button>
+    );
+  };
+
+  const ShareButtons = ({ fac }) => {
+    const [open, setOpen] = useState(false);
+    const shareUrl = `https://pickleikitai.com/?court=${fac.id}`;
+    const shareText = `${fac.name}｜ピックルイキタイ`;
+    const items = [
+      { label: "X", icon: "𝕏", onClick: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "_blank") },
+      { label: "LINE", icon: "💬", onClick: () => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(shareText + "\n" + shareUrl)}`, "_blank") },
+      { label: "リンクをコピー", icon: "🔗", onClick: () => { navigator.clipboard?.writeText(shareUrl); showToast("リンクをコピーしました"); setOpen(false); } },
+    ];
+    return (
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: shareText, url: shareUrl }).catch(() => {});
+            } else {
+              setOpen((v) => !v);
+            }
+          }}
+          title="シェア"
+          style={{ width: 34, height: 34, borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", display: "grid", placeItems: "center", cursor: "pointer", fontSize: 15 }}
+        >
+          🔗
+        </button>
+        {open && (
+          <>
+            <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setOpen(false)} />
+            <div style={{ position: "absolute", right: 0, top: 40, zIndex: 41, background: "#fff", border: `1.5px solid ${T.line}`, borderRadius: 14, boxShadow: "0 8px 24px rgba(14,42,43,0.18)", padding: 6, minWidth: 160 }}>
+              {items.map((it) => (
+                <button key={it.label} onClick={it.onClick} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 10px", border: "none", background: "none", borderRadius: 9, cursor: "pointer", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: T.ink, textAlign: "left" }}>
+                  <span style={{ width: 18, textAlign: "center" }}>{it.icon}</span>{it.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     );
   };
 
@@ -2088,7 +2136,10 @@ export default function PickleIkitai() {
               {detail.userSubmitted && <UserBadge />}
               {detail.cheap && <span style={{ fontSize: 10, fontWeight: 800, color: T.ballInk, background: T.ball, borderRadius: 6, padding: "2px 6px" }}>安い</span>}
             </div>
-            <div style={{ fontWeight: 900, fontSize: 19, marginTop: 6 }}>{detail.name}</div>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
+              <div style={{ fontWeight: 900, fontSize: 19 }}>{detail.name}</div>
+              <ShareButtons fac={detail} />
+            </div>
             <div style={{ fontSize: 13, color: "#5E716C", marginTop: 4 }}>
               {detail.area} ・ <VenueTag indoor={detail.indoor} size={13} /> ・ {geoState === "granted" ? "現在地" : "渋谷"}から約{dist(origin, detail).toFixed(1)}km
             </div>
