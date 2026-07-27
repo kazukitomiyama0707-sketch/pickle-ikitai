@@ -19,7 +19,7 @@ export const ARTICLES = [
     region: "大阪",
     keywords: ["大阪 ピックルボール", "ピックルボール コート 大阪", "大阪 ピックルボール 専用コート"],
     updated: "2026-07-17",
-    hero: "/court-indoor.jpg",
+    hero: "/article-heroes/osaka-pickleball-court.svg",
     body: `
 大阪でピックルボールをやりたい、と思って検索すると、出てくる情報が意外とバラバラで戸惑う。テニススクールの片隅でやっているところ、ジムのスタジオを時間で借りるところ、そして最近増えてきた「専用コート」。同じ「大阪のコート」でも中身がぜんぜん違う。
 
@@ -68,7 +68,7 @@ export const ARTICLES = [
     region: "東京",
     keywords: ["東京 ピックルボール", "ピックルボール コート 東京", "東京 ピックルボール 専用コート", "ピックルボール 東京 安い"],
     updated: "2026-07-17",
-    hero: "/court-indoor.jpg",
+    hero: "/article-heroes/tokyo-pickleball-court.svg",
     body: `
 東京でピックルボールを始めたい。そう思って調べ始めると、まず「そもそもどこでできるのか」でつまずく。テニスコートの一角、区の体育館の個人開放、最近増えている専用コート、ホテルの屋上まで、選択肢はあるのに情報が一箇所にまとまっていない。公式サイトを何個も開いて、結局その週末は流れる——ありがちなやつです。
 
@@ -126,7 +126,7 @@ export const ARTICLES = [
     region: "渋谷",
     keywords: ["渋谷 ピックルボール", "ピックルボール 渋谷", "渋谷 ピックルボール コート"],
     updated: "2026-07-17",
-    hero: "/court-indoor.jpg",
+    hero: "/article-heroes/shibuya-pickleball-court.svg",
     body: `
 渋谷でピックルボール、という需要は確実に増えている。若い人が多くて新しいもの好きな街だし、仕事帰りに寄りやすい。ただ渋谷は地価が高いぶん、専用コートがぽんぽんできる場所ではない。今ある選択肢を、駅からの距離と料金で整理しておきます。
 
@@ -157,7 +157,7 @@ export const ARTICLES = [
     region: "名古屋",
     keywords: ["名古屋 ピックルボール", "ピックルボール 名古屋", "愛知 ピックルボール コート"],
     updated: "2026-07-17",
-    hero: "/court-outdoor.jpg",
+    hero: "/article-heroes/nagoya-pickleball-court.svg",
     body: `
 名古屋のピックルボール事情は、この1年で大きく変わった。少し前まで「体育館でサークルがやっている」くらいだったのが、2026年に入って専用コートが立て続けにできている。名古屋でこれから始める人向けに、今どこへ行けばいいかを整理します。
 
@@ -192,7 +192,7 @@ export const ARTICLES = [
     region: "福岡",
     keywords: ["福岡 ピックルボール", "ピックルボール 福岡", "九州 ピックルボール コート"],
     updated: "2026-07-17",
-    hero: "/court-indoor.jpg",
+    hero: "/article-heroes/fukuoka-pickleball-court.svg",
     body: `
 福岡は、九州のピックルボールの中心になりつつある。九州で最初の屋内専用コートができたのも福岡だし、屋外専用コートも周辺にある。福岡でこれから始める人向けに、今の選択肢を整理します。
 
@@ -223,7 +223,7 @@ export const ARTICLES = [
     region: "旅先・リゾート",
     keywords: ["ピックルボール リゾート", "ホテル ピックルボール", "旅行 ピックルボール", "ピックルボール 温泉"],
     updated: "2026-07-17",
-    hero: "/court-outdoor.jpg",
+    hero: "/article-heroes/resort-hotel-pickleball.svg",
     body: `
 旅行先でもピックルボールをやりたい。せっかくのリゾートで、朝いちにコートで一汗かいてから温泉やビーチへ——というのは、やってみると想像以上に贅沢な時間です。ただ「どのホテルにコートがあるのか」は本当に情報がまとまっていない。ここでは、ホテルやリゾートに併設された全国のコートを厳選しました。
 
