@@ -239,7 +239,7 @@ const hasNG = (s = "") => /(https?:\/\/|www\.)/i.test(s) || /\d{2,4}-\d{2,4}-\d{
 
 /* ---------------- ルーティング ---------------- */
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
     const path = url.pathname;
@@ -565,6 +565,55 @@ export default {
         const key = `court/${uuid()}`;
         await env.PHOTOS.put(key, buf, { httpMetadata: { contentType: ctype } });
         return json({ photo: `${url.origin}/photos/${key}` }, {}, origin);
+      }
+
+      /* --- ページビュー記録（マーケ流入元の計測。Cookie・IP・UAは保存しない） --- */
+      if (path === "/api/track" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const p = sanitize(body.path || "", 200);
+        const ref = sanitize(body.ref || "", 120);
+        const utm = sanitize(body.utm_source || "", 40);
+        if (p) {
+          const row = env.DB.prepare(
+            "INSERT INTO page_views (id, path, ref, utm_source, created_at) VALUES (?, ?, ?, ?, ?)"
+          ).bind(uuid(), p, ref || null, utm || null, nowISO()).run();
+          ctx.waitUntil(row);
+        }
+        return json({ ok: true }, {}, origin);
+      }
+
+      /* --- 集計ダッシュボード（?key= が ADMIN_KEY と一致する時のみ） --- */
+      if (path === "/api/stats" && request.method === "GET") {
+        if (!env.ADMIN_KEY || url.searchParams.get("key") !== env.ADMIN_KEY) {
+          return json({ error: "Not found" }, { status: 404 }, origin);
+        }
+        const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const [views, users, pikkatsu, byDay, byPath, byUtm, topReferred] = await Promise.all([
+          env.DB.prepare("SELECT COUNT(*) AS n FROM page_views WHERE created_at > ?").bind(since).first(),
+          env.DB.prepare("SELECT COUNT(*) AS n FROM users").first(),
+          env.DB.prepare("SELECT COUNT(*) AS n FROM pikkatsu").first(),
+          env.DB.prepare(
+            "SELECT substr(created_at,1,10) AS day, COUNT(*) AS n FROM page_views WHERE created_at > ? GROUP BY day ORDER BY day DESC LIMIT 14"
+          ).bind(since).all(),
+          env.DB.prepare(
+            "SELECT path, COUNT(*) AS n FROM page_views WHERE created_at > ? GROUP BY path ORDER BY n DESC LIMIT 15"
+          ).bind(since).all(),
+          env.DB.prepare(
+            "SELECT COALESCE(utm_source, ref, '(direct)') AS source, COUNT(*) AS n FROM page_views WHERE created_at > ? GROUP BY source ORDER BY n DESC LIMIT 15"
+          ).bind(since).all(),
+          env.DB.prepare(
+            "SELECT referred_by, COUNT(*) AS n FROM users WHERE referred_by IS NOT NULL GROUP BY referred_by ORDER BY n DESC LIMIT 10"
+          ).all(),
+        ]);
+        return json({
+          totalUsers: users?.n || 0,
+          totalPikkatsu: pikkatsu?.n || 0,
+          viewsLast14d: views?.n || 0,
+          byDay: byDay.results,
+          topPaths: byPath.results,
+          topSources: byUtm.results,
+          topReferrers: topReferred.results,
+        }, {}, origin);
       }
 
       return json({ error: "Not found" }, { status: 404 }, origin);

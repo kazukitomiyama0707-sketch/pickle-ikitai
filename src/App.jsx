@@ -851,6 +851,21 @@ export default function PickleIkitai() {
     if (f) { setDetail(f); setDetailPikLimit(3); }
   }, []);
 
+  // マーケ流入元の計測（Cookie不使用。パス・リファラのホスト名・utm_sourceのみ送信）
+  useEffect(() => {
+    try {
+      const utm = new URLSearchParams(window.location.search).get("utm_source") || "";
+      let refHost = "";
+      try { refHost = document.referrer ? new URL(document.referrer).hostname : ""; } catch { refHost = ""; }
+      const body = JSON.stringify({ path: window.location.pathname, ref: refHost, utm_source: utm });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(`${API_BASE}/api/track`, new Blob([body], { type: "application/json" }));
+      } else {
+        fetch(`${API_BASE}/api/track`, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
   const authToken = () => localStorage.getItem("pk_jwt");
 
   const openProfileEdit = () => setProfileEdit({
@@ -1131,11 +1146,11 @@ export default function PickleIkitai() {
 
   const ShareButtons = ({ fac }) => {
     const [open, setOpen] = useState(false);
-    const shareUrl = `https://pickleikitai.com/?court=${fac.id}`;
+    const shareUrl = `https://pickleikitai.com/?court=${fac.id}&utm_source=share`;
     const shareText = `${fac.name}｜ピックルイキタイ`;
     const items = [
-      { label: "X", icon: "𝕏", onClick: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, "_blank") },
-      { label: "LINE", icon: "💬", onClick: () => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(shareText + "\n" + shareUrl)}`, "_blank") },
+      { label: "X", icon: "𝕏", onClick: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`https://pickleikitai.com/?court=${fac.id}&utm_source=share_x`)}`, "_blank") },
+      { label: "LINE", icon: "💬", onClick: () => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(shareText + "\n" + `https://pickleikitai.com/?court=${fac.id}&utm_source=share_line`)}`, "_blank") },
       { label: "リンクをコピー", icon: "🔗", onClick: () => { navigator.clipboard?.writeText(shareUrl); showToast("リンクをコピーしました"); setOpen(false); } },
     ];
     return (
@@ -1794,7 +1809,7 @@ export default function PickleIkitai() {
             </div>
             <button
               onClick={() => {
-                const url = user ? `https://pickleikitai.com/?ref=${user.id}` : "https://pickleikitai.com/";
+                const url = user ? `https://pickleikitai.com/?ref=${user.id}&utm_source=invite` : "https://pickleikitai.com/?utm_source=share_footer";
                 const text = "ピックルイキタイ - 全国のピックルボールコートがぜんぶ見つかる横断検索サイト";
                 if (navigator.share) navigator.share({ title: text, url }).catch(() => {});
                 else { navigator.clipboard?.writeText(url); showToast("リンクをコピーしました"); }
@@ -1945,7 +1960,7 @@ export default function PickleIkitai() {
                     <div style={{ fontSize: 11, color: "#5E716C", marginTop: 3, lineHeight: 1.6 }}>このリンクから登録した人が「招待」にカウントされます。招待した人数に応じて特典バッジがもらえます</div>
                     <button
                       onClick={() => {
-                        const url = `https://pickleikitai.com/?ref=${user?.id}`;
+                        const url = `https://pickleikitai.com/?ref=${user?.id}&utm_source=invite`;
                         const text = "ピックルイキタイ - 全国のピックルボールコートがぜんぶ見つかる横断検索サイト";
                         if (navigator.share) navigator.share({ title: text, url }).catch(() => {});
                         else { navigator.clipboard?.writeText(url); showToast("招待リンクをコピーしました"); }
