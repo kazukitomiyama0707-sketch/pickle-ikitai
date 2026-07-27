@@ -1186,7 +1186,7 @@ export default function PickleIkitai() {
       {/* 新規登録直後: 公式LINE友だち追加の誘導 */}
       {addLineGuide && (
         <>
-          <div style={{ ...S.sheetBack, zIndex: 100 }} onClick={() => setAddLineGuide(false)} />
+          <div style={{ ...S.sheetBack, zIndex: 100 }} onClick={() => { setAddLineGuide(false); setPikPicker(true); }} />
           <div style={{ ...S.sheet, zIndex: 110, maxWidth: 420 }}>
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 14px" }} />
             <div style={{ textAlign: "center" }}>
@@ -1195,11 +1195,11 @@ export default function PickleIkitai() {
               <div style={{ fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.7 }}>新着コート情報・お得な情報は公式LINEでお届けしています。よければ友だち追加してください。</div>
             </div>
             <button
-              onClick={() => { window.open(LINE_URL, "_blank"); setAddLineGuide(false); }}
+              onClick={() => { window.open(LINE_URL, "_blank"); setAddLineGuide(false); setPikPicker(true); }}
               style={{ width: "100%", marginTop: 20, padding: "13px 0", borderRadius: 12, border: "none", background: "#06C755", color: "#fff", fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT }}>
               公式LINEを友だち追加する
             </button>
-            <button style={{ ...S.btn(false), marginTop: 8 }} onClick={() => setAddLineGuide(false)}>あとで</button>
+            <button style={{ ...S.btn(false), marginTop: 8 }} onClick={() => { setAddLineGuide(false); setPikPicker(true); }}>あとで</button>
           </div>
         </>
       )}
@@ -1735,8 +1735,27 @@ export default function PickleIkitai() {
             <BallGuy size={34} mood="happy" />
             <BallGuy size={34} flip mood="oops" />
           </div>
+          {/* サイトをシェア（口コミ拡散の入り口） */}
+          <div style={{ maxWidth: 420, margin: "26px auto 0", background: "rgba(215,244,56,0.1)", border: `1.5px solid ${T.ball}`, borderRadius: 16, padding: "18px 18px 20px" }}>
+            <div style={{ fontWeight: 900, fontSize: 15 }}>⚡ ピックルイキタイをシェア</div>
+            <div style={{ fontSize: 12, opacity: 0.82, marginTop: 7, lineHeight: 1.9 }}>
+              ピックル仲間に教えてあげてください。<br />
+              {user ? "あなたの招待リンクなら、招待人数もカウントされます。" : "一緒にプレーする仲間が増えると、コート情報ももっと充実します。"}
+            </div>
+            <button
+              onClick={() => {
+                const url = user ? `https://pickleikitai.com/?ref=${user.id}` : "https://pickleikitai.com/";
+                const text = "ピックルイキタイ - 全国のピックルボールコートがぜんぶ見つかる横断検索サイト";
+                if (navigator.share) navigator.share({ title: text, url }).catch(() => {});
+                else { navigator.clipboard?.writeText(url); showToast("リンクをコピーしました"); }
+              }}
+              style={{ width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 12, border: "none", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: FONT }}>
+              シェアする →
+            </button>
+          </div>
+
           {/* 伸びしろ報告（バグ報告のポジティブ版） */}
-          <div style={{ maxWidth: 420, margin: "26px auto 0", background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(255,255,255,0.18)", borderRadius: 16, padding: "18px 18px 20px" }}>
+          <div style={{ maxWidth: 420, margin: "16px auto 0", background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(255,255,255,0.18)", borderRadius: 16, padding: "18px 18px 20px" }}>
             <div style={{ fontWeight: 900, fontSize: 15 }}>🌱 伸びしろ報告</div>
             <div style={{ fontSize: 12, opacity: 0.82, marginTop: 7, lineHeight: 1.9 }}>
               「ここ使いにくい」「この情報が古い」「こんなコートもあるよ」——<br />
