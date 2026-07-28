@@ -536,13 +536,14 @@ const SEED_PIKKATSU = [
   pk("round1-fukushima", "2026-06-27", "21-23", 4, 2, "福島のスポッチャ、夜遅めでも稼働してて仕事帰りに寄れた", "", 3),
 ];
 
-const PikCard = ({ k, onLike, facName, onFac }) => {
+const PikCard = ({ k, onLike, facName, onFac, isOwner, onEdit, onDelete }) => {
   const c = CROWD[k.crowd] || CROWD[2];
+  const [confirming, setConfirming] = useState(false);
   return (
     <div style={{ border: `1px solid ${T.line}`, borderLeft: `3px solid ${c.color}`, borderRadius: 12, padding: "11px 13px", marginTop: 8, background: "#fff", boxShadow: "0 1px 3px rgba(14,42,43,0.06)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 800 }}>{k.nickname || NONAME}</div>
-        <div style={{ fontSize: 11, color: "#8B9B96" }}>{k.playedAt} ・ {k.timeBand}時</div>
+        <div style={{ fontSize: 11, color: "#8B9B96", flexShrink: 0 }}>{k.playedAt} ・ {k.timeBand}時</div>
       </div>
       {facName && (
         <button onClick={onFac} style={{ marginTop: 4, padding: 0, border: "none", background: "none", color: T.courtDeep, fontWeight: 800, fontSize: 12, cursor: "pointer", textAlign: "left" }}>📍 {facName}</button>
@@ -554,7 +555,23 @@ const PikCard = ({ k, onLike, facName, onFac }) => {
       </div>
       {k.comment ? <div style={{ fontSize: 13, marginTop: 7, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{k.comment}</div> : null}
       {k.photo ? <img src={k.photo} alt="" loading="lazy" style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 10, marginTop: 8, display: "block" }} /> : null}
-      <button onClick={onLike} style={{ marginTop: 9, padding: "5px 12px", borderRadius: 999, border: "none", background: T.ball, fontWeight: 900, fontSize: 12, cursor: "pointer", color: T.ballInk }}>⚡ {k.likes}</button>
+      {confirming ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9, background: "#FCEBE6", borderRadius: 10, padding: "8px 10px" }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#B3402A", flex: 1 }}>本当に削除しますか？元に戻せません</span>
+          <button onClick={() => { setConfirming(false); onDelete(); }} style={{ padding: "5px 12px", borderRadius: 999, border: "none", background: "#B3402A", fontWeight: 900, fontSize: 12, cursor: "pointer", color: "#fff", flexShrink: 0 }}>削除する</button>
+          <button onClick={() => setConfirming(false)} style={{ padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ink, flexShrink: 0 }}>キャンセル</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9 }}>
+          <button onClick={onLike} style={{ padding: "5px 12px", borderRadius: 999, border: "none", background: T.ball, fontWeight: 900, fontSize: 12, cursor: "pointer", color: T.ballInk }}>⚡ {k.likes}</button>
+          {isOwner && (
+            <>
+              <button onClick={onEdit} style={{ padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ink }}>✏️ 編集</button>
+              <button onClick={() => setConfirming(true)} style={{ padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: "#B3402A" }}>🗑 削除</button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -907,6 +924,8 @@ export default function PickleIkitai() {
   const pikOf = (facId) => pikkatsu.filter((p) => p.facilityId === facId).sort(pikSort);
   const pikCount = (facId) => pikkatsu.reduce((n, p) => n + (p.facilityId === facId ? 1 : 0), 0);
   const facById = (id) => ALL_FACS.find((f) => f.id === id);
+  // ローカル限定投稿(upk*)は他人に見えないので常に自分のもの。サーバー投稿はuserIdで判定
+  const isPikOwner = (k) => String(k.id).startsWith("upk") || (!!user && k.userId === user.id);
   const openDetail = (f) => { setDetail(f); setDetailPikLimit(3); };
   const likePik = (id) => {
     setPikkatsu((list) => list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)));
@@ -1089,6 +1108,33 @@ export default function PickleIkitai() {
     // まず書ける。保存時にログイン/登録を促す（投稿ハードルを下げる）
     setPikForm({ facilityId: fac.id, facilityName: fac.name, dateChoice: "today", playedAt: todayISO(), timeBand: "", partySize: 4, crowd: 2, comment: "", nickname: user?.name || "", courtCondition: "", photo: "" });
   };
+  // 自分の投稿を編集フォームに読み込む
+  const openPikEdit = (k) => {
+    setPikForm({
+      editingId: k.id,
+      facilityId: k.facilityId, facilityName: facById(k.facilityId)?.name || "",
+      dateChoice: "other", playedAt: k.playedAt, timeBand: k.timeBand,
+      partySize: k.partySize, crowd: k.crowd, comment: k.comment || "",
+      nickname: k.nickname || user?.name || "", courtCondition: k.courtCondition || "", photo: k.photo || "",
+    });
+  };
+  // 削除確認はPikCard側のインラインUIで行う（ネイティブconfirm()はモバイルブラウザで挙動が不安定なため使わない）
+  const deletePik = (id) => {
+    if (String(id).startsWith("upk")) {
+      setPikkatsu((list) => list.filter((p) => p.id !== id));
+      showToast("削除しました");
+      return;
+    }
+    const token = authToken();
+    fetch(`${API_BASE}/api/pikkatsu/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      .then(async (res) => {
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(d.error || "削除に失敗しました"); return; }
+        setPikkatsu((list) => list.filter((p) => p.id !== id));
+        showToast("削除しました");
+      })
+      .catch(() => showToast("通信に失敗しました。時間をおいて再度お試しください"));
+  };
   // どこからでも呼べるピク活投稿の入口（右下FAB・ナビ・マイページ共通）
   const openPikGlobal = () => {
     if (!user) { setAuthView("signup"); showToast("ピク活の投稿には登録が必要です"); return; }
@@ -1123,6 +1169,31 @@ export default function PickleIkitai() {
     if (!pf.playedAt || !pf.timeBand) { showToast("日付と時間帯を選んでください"); return; }
     const comment = sanitizeText(pf.comment);
     if (comment && hasNG(comment)) { showToast("コメントに電話番号・URLは含められません"); return; }
+
+    if (pf.editingId) {
+      const patch = { playedAt: pf.playedAt, timeBand: pf.timeBand, partySize: pf.partySize, crowd: pf.crowd, courtCondition: sanitizeText(pf.courtCondition), comment };
+      if (String(pf.editingId).startsWith("upk")) {
+        setPikkatsu((list) => list.map((p) => (p.id === pf.editingId ? { ...p, ...patch } : p)));
+        setPikForm(null);
+        showToast("ピク活を更新しました");
+        return;
+      }
+      const token = authToken();
+      setPikForm(null);
+      try {
+        const res = await fetch(`${API_BASE}/api/pikkatsu/${pf.editingId}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        const d = await res.json();
+        if (!res.ok) { showToast(d.error || "更新に失敗しました"); return; }
+        setPikkatsu((list) => list.map((p) => (p.id === pf.editingId ? { ...p, ...patch } : p)));
+        showToast("ピク活を更新しました");
+      } catch { showToast("通信に失敗しました。時間をおいて再度お試しください"); }
+      return;
+    }
+
     const token = authToken();
     // ログイン済みなら共有DB(D1)へ投稿。未ログインはローカル保存にフォールバック
     if (token) {
@@ -1856,7 +1927,7 @@ export default function PickleIkitai() {
             {timeline.map((k) => {
               const f = facById(k.facilityId);
               return (
-                <PikCard key={k.id} k={k} facName={f ? f.name : ""} onFac={() => f && openDetail(f)} onLike={() => likePik(k.id)} />
+                <PikCard key={k.id} k={k} facName={f ? f.name : ""} onFac={() => f && openDetail(f)} onLike={() => likePik(k.id)} isOwner={isPikOwner(k)} onEdit={() => openPikEdit(k)} onDelete={() => deletePik(k.id)} />
               );
             })}
           </div>
@@ -2081,7 +2152,7 @@ export default function PickleIkitai() {
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 16px" }} />
 
             {authView === "account" ? (() => {
-              const mine = pikkatsu.filter((p) => p.nickname === user?.name);
+              const mine = pikkatsu.filter(isPikOwner);
               const courtN = new Set(mine.map((p) => p.facilityId)).size;
               const totalLikes = mine.reduce((n, p) => n + (p.likes || 0), 0);
               const links = user?.links || {};
@@ -2190,7 +2261,7 @@ export default function PickleIkitai() {
                   <div style={{ fontWeight: 900, fontSize: 14, marginTop: 22 }}>自分のピク活 <span style={{ color: "#8B9B96", fontWeight: 700, fontSize: 12 }}>{mine.length}件</span></div>
                   {mine.length === 0
                     ? <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 8 }}>まだピク活がありません。コートで打ったら記録しよう⚡</div>
-                    : mine.map((k) => { const f = facById(k.facilityId); return <PikCard key={k.id} k={k} facName={f ? f.name : ""} onFac={() => { setAuthView(null); f && openDetail(f); }} onLike={() => likePik(k.id)} />; })}
+                    : mine.map((k) => { const f = facById(k.facilityId); return <PikCard key={k.id} k={k} facName={f ? f.name : ""} onFac={() => { setAuthView(null); f && openDetail(f); }} onLike={() => likePik(k.id)} isOwner={isPikOwner(k)} onEdit={() => openPikEdit(k)} onDelete={() => deletePik(k.id)} />; })}
                 </div>
               );
             })() : (
@@ -2368,7 +2439,7 @@ export default function PickleIkitai() {
           <div style={{ ...S.sheetBack, zIndex: 60 }} onClick={() => setPikForm(null)} />
           <div style={{ ...S.sheet, zIndex: 70 }}>
             <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
-            <div style={{ fontWeight: 900, fontSize: 17 }}>⚡ ピク活を投稿</div>
+            <div style={{ fontWeight: 900, fontSize: 17 }}>{pikForm.editingId ? "✏️ ピク活を編集" : "⚡ ピク活を投稿"}</div>
             <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 3 }}>{pikForm.facilityName}</div>
 
             <label style={S.label}>いつ？ *</label>
@@ -2433,7 +2504,7 @@ export default function PickleIkitai() {
               <span style={{ fontWeight: 800, fontSize: 13 }}>{pikForm.nickname || NONAME}</span>
             </div>
 
-            <button style={{ ...S.btn(true), marginTop: 18, background: T.ball, color: T.ballInk }} onClick={submitPik}>⚡ この内容で投稿する</button>
+            <button style={{ ...S.btn(true), marginTop: 18, background: T.ball, color: T.ballInk }} onClick={submitPik}>{pikForm.editingId ? "✏️ 更新する" : "⚡ この内容で投稿する"}</button>
             <button style={S.btn(false)} onClick={() => setPikForm(null)}>キャンセル</button>
           </div>
         </>
@@ -2550,7 +2621,7 @@ export default function PickleIkitai() {
               <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 8 }}>まだピク活がありません。最初の記録を書こう⚡</div>
             )}
             {pikOf(detail.id).slice(0, detailPikLimit).map((k) => (
-              <PikCard key={k.id} k={k} onLike={() => likePik(k.id)} />
+              <PikCard key={k.id} k={k} onLike={() => likePik(k.id)} isOwner={isPikOwner(k)} onEdit={() => openPikEdit(k)} onDelete={() => deletePik(k.id)} />
             ))}
             {pikCount(detail.id) > detailPikLimit && (
               <button style={{ ...S.btn(false), marginTop: 8 }} onClick={() => setDetailPikLimit((n) => n + 5)}>もっと見る（残り{pikCount(detail.id) - detailPikLimit}件）</button>

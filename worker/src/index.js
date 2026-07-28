@@ -14,7 +14,7 @@ const ALLOW_ORIGINS = ["https://pickleikitai.com", "https://www.pickleikitai.com
 
 const cors = (origin) => ({
   "Access-Control-Allow-Origin": ALLOW_ORIGINS.includes(origin) ? origin : ALLOW_ORIGINS[0],
-  "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type,Authorization",
   "Access-Control-Allow-Credentials": "true",
 });
@@ -436,6 +436,7 @@ export default {
         const { results } = await q.all();
         const items = results.map((r) => ({
           id: r.id,
+          userId: r.user_id,
           facilityId: r.facility_id,
           playedAt: r.played_at,
           timeBand: r.time_band,
@@ -495,7 +496,7 @@ export default {
 
         return json({
           item: {
-            id, facilityId, playedAt, timeBand,
+            id, userId: user.id, facilityId, playedAt, timeBand,
             partySize: parseInt(form.get("partySize") || "4", 10),
             crowd: parseInt(form.get("crowd") || "2", 10),
             courtCondition: sanitize(form.get("courtCondition") || "", 30),
@@ -504,6 +505,51 @@ export default {
             likes: 0,
           },
         }, {}, origin);
+      }
+
+      /* --- ピク活編集（投稿者本人のみ） --- */
+      if (path.startsWith("/api/pikkatsu/") && !path.endsWith("/like") && request.method === "PATCH") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        const pid = path.split("/")[3];
+        const row = await env.DB.prepare("SELECT user_id FROM pikkatsu WHERE id = ?").bind(pid).first();
+        if (!row) return json({ error: "投稿が見つかりません" }, { status: 404 }, origin);
+        if (row.user_id !== user.id) return json({ error: "本人の投稿のみ編集できます" }, { status: 403 }, origin);
+
+        const body = await request.json().catch(() => ({}));
+        const playedAt = String(body.playedAt || "");
+        const timeBand = String(body.timeBand || "");
+        if (!playedAt || !timeBand) return json({ error: "日付と時間帯は必須です" }, { status: 400 }, origin);
+        const comment = sanitize(body.comment || "");
+        if (comment && hasNG(comment)) return json({ error: "コメントに電話番号・URLは含められません" }, { status: 400 }, origin);
+        const partySize = parseInt(body.partySize, 10) || 4;
+        const crowd = parseInt(body.crowd, 10) || 2;
+        const courtCondition = sanitize(body.courtCondition || "", 30);
+
+        await env.DB.prepare(
+          `UPDATE pikkatsu SET played_at = ?, time_band = ?, party_size = ?, crowd = ?, court_condition = ?, comment = ? WHERE id = ?`
+        ).bind(playedAt, timeBand, partySize, crowd, courtCondition, comment, pid).run();
+
+        return json({ item: { id: pid, playedAt, timeBand, partySize, crowd, courtCondition, comment } }, {}, origin);
+      }
+
+      /* --- ピク活削除（投稿者本人のみ） --- */
+      if (path.startsWith("/api/pikkatsu/") && !path.endsWith("/like") && request.method === "DELETE") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        const pid = path.split("/")[3];
+        const row = await env.DB.prepare("SELECT user_id, photo_key FROM pikkatsu WHERE id = ?").bind(pid).first();
+        if (!row) return json({ error: "投稿が見つかりません" }, { status: 404 }, origin);
+        if (row.user_id !== user.id) return json({ error: "本人の投稿のみ削除できます" }, { status: 403 }, origin);
+
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM likes WHERE pikkatsu_id = ?").bind(pid),
+          env.DB.prepare("DELETE FROM pikkatsu WHERE id = ?").bind(pid),
+        ]);
+        if (env.PHOTOS && row.photo_key) {
+          try { await env.PHOTOS.delete(row.photo_key); } catch {}
+        }
+        return json({ ok: true }, {}, origin);
       }
 
       /* --- いいね（1ユーザー1回） --- */
