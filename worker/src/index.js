@@ -252,8 +252,10 @@ export default {
         const redirect = `${url.origin}/auth/line/callback`;
         const back = safeReturnUrl(url.searchParams.get("return"));
         if (!back) return new Response("戻り先URLが不正です", { status: 400 });
+        // 招待経由のアクセスなら招待者IDを state に内包し、新規登録時に referred_by へ引き継ぐ
+        const ref = String(url.searchParams.get("ref") || "").slice(0, 64) || undefined;
         // stateは署名付きJWTにして戻り先も内包（cookieに依存せずCSRF検証できる）
-        const state = await signJWT({ b: back, n: uuid(), exp: Math.floor(Date.now() / 1000) + 600 }, env.JWT_SECRET);
+        const state = await signJWT({ b: back, r: ref, n: uuid(), exp: Math.floor(Date.now() / 1000) + 600 }, env.JWT_SECRET);
         const authUrl = new URL("https://access.line.me/oauth2/v2.1/authorize");
         authUrl.searchParams.set("response_type", "code");
         authUrl.searchParams.set("client_id", env.LINE_CHANNEL_ID);
@@ -299,8 +301,15 @@ export default {
           user = await env.DB.prepare("SELECT * FROM users WHERE line_user_id = ?").bind(prof.userId).first();
           if (!user) {
             const id = uuid();
-            await env.DB.prepare("INSERT INTO users (id, line_user_id, name, avatar_url, created_at) VALUES (?, ?, ?, ?, ?)")
-              .bind(id, prof.userId, sanitize(prof.displayName || "ピックラー", 20), prof.pictureUrl || null, nowISO())
+            // 招待者IDが実在するユーザーであれば referred_by に紐づける（自己招待は無視）
+            let referredBy = null;
+            const refRaw = String(st.r || "").trim();
+            if (refRaw && refRaw !== id) {
+              const refUser = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(refRaw).first();
+              if (refUser) referredBy = refUser.id;
+            }
+            await env.DB.prepare("INSERT INTO users (id, line_user_id, name, avatar_url, created_at, referred_by) VALUES (?, ?, ?, ?, ?, ?)")
+              .bind(id, prof.userId, sanitize(prof.displayName || "ピックラー", 20), prof.pictureUrl || null, nowISO(), referredBy)
               .run();
             user = { id, name: prof.displayName, avatar_url: prof.pictureUrl };
           }

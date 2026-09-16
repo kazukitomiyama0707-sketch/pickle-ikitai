@@ -772,7 +772,12 @@ const OPERATOR = "MUFASA Technology";
 const CONTACT_EMAIL = "pickleikitai@gmail.com";
 const LINE_URL = "https://lin.ee/OWBC5Kw"; // 公式LINE（伸びしろ報告の送信先）
 const API_BASE = "https://pickleikitai-api.kazukitomiyama0707.workers.dev";
-const startLineLogin = () => { window.location.href = `${API_BASE}/auth/line/start?return=${encodeURIComponent(window.location.origin + "/")}`; };
+const startLineLogin = () => {
+  const params = new URLSearchParams({ return: window.location.origin + "/" });
+  const ref = localStorage.getItem("pk_ref");
+  if (ref) params.set("ref", ref);
+  window.location.href = `${API_BASE}/auth/line/start?${params.toString()}`;
+};
 const TERMS = [
   ["第1条（サービス内容）", "「ピックルイキタイ」（以下、本サービス）は、東京および関東圏のピックルボールコート・イベント情報を横断的に紹介する情報ポータルです。コートの予約・利用契約は利用者と各施設との間で直接成立し、本サービスはその当事者となりません。"],
   ["第2条（情報の正確性）", "本サービスは掲載情報の正確性・完全性・最新性を保証しません。料金・空き状況・ピックルボール利用の可否等は、必ず各施設の公式情報をご確認ください。空き枠表示は参考情報であり、実際の予約可否を保証するものではありません。"],
