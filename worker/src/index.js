@@ -576,6 +576,129 @@ export default {
         return json({ likes: row?.likes ?? 0 }, {}, origin);
       }
 
+      /* --- マッチング募集一覧（直近1日前まで含める） --- */
+      if (path === "/api/matches" && request.method === "GET") {
+        const me = await currentUser(request, env);
+        const { results } = await env.DB.prepare(
+          `SELECT m.*, u.name AS host_name, u.avatar_url AS host_avatar,
+                  (SELECT COUNT(*) FROM match_participants WHERE match_id = m.id) AS joined_count
+           FROM matches m JOIN users u ON u.id = m.host_id
+           WHERE m.status = 'open' AND m.play_date >= date('now', '-1 day')
+           ORDER BY m.play_date ASC, m.created_at DESC LIMIT 100`
+        ).all();
+        let joinedSet = new Set();
+        if (me) {
+          const j = await env.DB.prepare("SELECT match_id FROM match_participants WHERE user_id = ?").bind(me.id).all();
+          joinedSet = new Set(j.results.map((r) => r.match_id));
+        }
+        const items = results.map((r) => ({
+          id: r.id,
+          hostId: r.host_id,
+          hostName: r.host_name,
+          hostAvatar: r.host_avatar,
+          facilityId: r.facility_id,
+          facilityName: r.facility_name,
+          playDate: r.play_date,
+          timeBand: r.time_band,
+          level: r.level,
+          capacity: r.capacity,
+          joined: r.joined_count,
+          note: r.note || "",
+          createdAt: r.created_at,
+          joinedByMe: joinedSet.has(r.id),
+          isHost: me?.id === r.host_id,
+        }));
+        return json({ items }, {}, origin);
+      }
+
+      /* --- マッチング募集を作成（要ログイン） --- */
+      if (path === "/api/matches" && request.method === "POST") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+
+        const body = await request.json().catch(() => ({}));
+        const facilityName = sanitize(body.facilityName || "", 60);
+        const playDate = String(body.playDate || "");
+        const timeBand = String(body.timeBand || "");
+        if (!facilityName || !playDate || !timeBand) return json({ error: "場所・日付・時間帯は必須です" }, { status: 400 }, origin);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(playDate)) return json({ error: "日付の形式が不正です" }, { status: 400 }, origin);
+
+        const level = ["any", "beginner", "intermediate", "advanced"].includes(body.level) ? body.level : "any";
+        const capacity = Math.min(Math.max(parseInt(body.capacity, 10) || 4, 2), 20);
+        const note = sanitize(body.note || "", 140);
+        if (note && hasNG(note)) return json({ error: "メモに電話番号・URLは含められません" }, { status: 400 }, origin);
+        const facilityId = body.facilityId ? String(body.facilityId).slice(0, 64) : null;
+
+        // 1日3件までの連投制限（ピク活と同様の乱用防止）
+        const { count } = await env.DB.prepare(
+          "SELECT COUNT(*) AS count FROM matches WHERE host_id = ? AND date(created_at) = date('now')"
+        ).bind(user.id).first();
+        if (count >= 3) return json({ error: "募集の作成は1日3件までです" }, { status: 429 }, origin);
+
+        const id = uuid();
+        await env.DB.batch([
+          env.DB.prepare(
+            `INSERT INTO matches (id, host_id, facility_id, facility_name, play_date, time_band, level, capacity, note, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+          ).bind(id, user.id, facilityId, facilityName, playDate, timeBand, level, capacity, note, nowISO()),
+          env.DB.prepare(
+            "INSERT INTO match_participants (id, match_id, user_id, joined_at) VALUES (?, ?, ?, ?)"
+          ).bind(uuid(), id, user.id, nowISO()),
+        ]);
+
+        return json({
+          item: {
+            id, hostId: user.id, hostName: user.name, hostAvatar: user.avatar_url,
+            facilityId, facilityName, playDate, timeBand, level, capacity,
+            joined: 1, note, createdAt: nowISO(), joinedByMe: true, isHost: true,
+          },
+        }, {}, origin);
+      }
+
+      /* --- 募集に参加 --- */
+      if (path.startsWith("/api/matches/") && path.endsWith("/join") && request.method === "POST") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        const mid = path.split("/")[3];
+        const m = await env.DB.prepare("SELECT * FROM matches WHERE id = ?").bind(mid).first();
+        if (!m || m.status !== "open") return json({ error: "この募集は見つかりません" }, { status: 404 }, origin);
+        const dup = await env.DB.prepare("SELECT 1 FROM match_participants WHERE match_id = ? AND user_id = ?").bind(mid, user.id).first();
+        if (dup) return json({ error: "すでに参加しています" }, { status: 409 }, origin);
+        const { n } = await env.DB.prepare("SELECT COUNT(*) AS n FROM match_participants WHERE match_id = ?").bind(mid).first();
+        if (n >= m.capacity) return json({ error: "定員に達しています" }, { status: 409 }, origin);
+        await env.DB.prepare("INSERT INTO match_participants (id, match_id, user_id, joined_at) VALUES (?, ?, ?, ?)").bind(uuid(), mid, user.id, nowISO()).run();
+        const { n: joined } = await env.DB.prepare("SELECT COUNT(*) AS n FROM match_participants WHERE match_id = ?").bind(mid).first();
+        return json({ joined }, {}, origin);
+      }
+
+      /* --- 募集から退出 --- */
+      if (path.startsWith("/api/matches/") && path.endsWith("/leave") && request.method === "POST") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        const mid = path.split("/")[3];
+        const m = await env.DB.prepare("SELECT host_id FROM matches WHERE id = ?").bind(mid).first();
+        if (!m) return json({ error: "この募集は見つかりません" }, { status: 404 }, origin);
+        if (m.host_id === user.id) return json({ error: "主催者は退出できません。募集自体をキャンセルしてください" }, { status: 400 }, origin);
+        await env.DB.prepare("DELETE FROM match_participants WHERE match_id = ? AND user_id = ?").bind(mid, user.id).run();
+        const { n: joined } = await env.DB.prepare("SELECT COUNT(*) AS n FROM match_participants WHERE match_id = ?").bind(mid).first();
+        return json({ joined }, {}, origin);
+      }
+
+      /* --- 募集をキャンセル（主催者本人のみ） --- */
+      if (path.startsWith("/api/matches/") && !path.endsWith("/join") && !path.endsWith("/leave") && request.method === "DELETE") {
+        const user = await currentUser(request, env);
+        if (!user) return json({ error: "ログインが必要です" }, { status: 401 }, origin);
+        const mid = path.split("/")[3];
+        const m = await env.DB.prepare("SELECT host_id FROM matches WHERE id = ?").bind(mid).first();
+        if (!m) return json({ error: "この募集は見つかりません" }, { status: 404 }, origin);
+        if (m.host_id !== user.id) return json({ error: "主催者のみキャンセルできます" }, { status: 403 }, origin);
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM match_participants WHERE match_id = ?").bind(mid),
+          env.DB.prepare("DELETE FROM matches WHERE id = ?").bind(mid),
+        ]);
+        return json({ ok: true }, {}, origin);
+      }
+
       /* --- 写真配信 --- */
       if (path.startsWith("/photos/")) {
         if (!env.PHOTOS) return new Response("Not found", { status: 404 });

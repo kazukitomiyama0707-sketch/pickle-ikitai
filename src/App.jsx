@@ -341,6 +341,12 @@ const CROWD = {
   3: { icon: "🔴", label: "混んでた", color: "#D6461F", bg: "#FCE7E0" },
 };
 const NONAME = "名無しピックラー";
+const LEVEL = {
+  any: { label: "不問", color: "#5E716C", bg: "#EFF2EF" },
+  beginner: { label: "初級", color: "#0E9E86", bg: "#E3F5EE" },
+  intermediate: { label: "中級", color: "#A6790C", bg: "#FBF3D9" },
+  advanced: { label: "上級", color: "#D6461F", bg: "#FCE7E0" },
+};
 
 // XSS対策: タグ文字を除去しプレーンテキスト化（表示側もReactが自動エスケープ）
 const sanitizeText = (s = "") => String(s).replace(/[<>]/g, "").slice(0, 140);
@@ -579,6 +585,49 @@ const PikCard = ({ k, onLike, facName, onFac, isOwner, onEdit, onDelete }) => {
               <button onClick={onEdit} style={{ padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ink }}>✏️ 編集</button>
               <button onClick={() => setConfirming(true)} style={{ padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: "#B3402A" }}>🗑 削除</button>
             </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MatchCard = ({ m, facName, onFac, onJoin, onLeave, onCancel }) => {
+  const [confirming, setConfirming] = useState(false);
+  const lv = LEVEL[m.level] || LEVEL.any;
+  const full = m.joined >= m.capacity;
+  return (
+    <div style={{ border: `1px solid ${T.line}`, borderLeft: `3px solid ${full ? "#8B9B96" : T.court}`, borderRadius: 12, padding: "11px 13px", marginTop: 8, background: "#fff", boxShadow: "0 1px 3px rgba(14,42,43,0.06)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 900 }}>{m.playDate}（{m.timeBand}時）</div>
+        <span style={{ fontSize: 11, fontWeight: 800, color: full ? "#B3402A" : T.courtDeep, flexShrink: 0 }}>{m.joined}/{m.capacity}人{full ? "・満員" : ""}</span>
+      </div>
+      {facName || m.facilityName ? (
+        <button onClick={onFac} disabled={!onFac} style={{ marginTop: 4, padding: 0, border: "none", background: "none", color: T.courtDeep, fontWeight: 800, fontSize: 12, cursor: onFac ? "pointer" : "default", textAlign: "left" }}>
+          📍 {facName || m.facilityName}
+        </button>
+      ) : null}
+      <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: lv.bg, color: lv.color, fontWeight: 800, fontSize: 11, borderRadius: 999, padding: "3px 10px" }}>Lv. {lv.label}</span>
+        <span style={{ fontSize: 12, color: "#5E716C" }}>🏓 {m.hostName || NONAME} さんの募集</span>
+      </div>
+      {m.note ? <div style={{ fontSize: 13, marginTop: 7, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.note}</div> : null}
+      {confirming ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9, background: "#FCEBE6", borderRadius: 10, padding: "8px 10px" }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#B3402A", flex: 1 }}>本当にキャンセルしますか？元に戻せません</span>
+          <button onClick={() => { setConfirming(false); onCancel(); }} style={{ padding: "5px 12px", borderRadius: 999, border: "none", background: "#B3402A", fontWeight: 900, fontSize: 12, cursor: "pointer", color: "#fff", flexShrink: 0 }}>キャンセルする</button>
+          <button onClick={() => setConfirming(false)} style={{ padding: "5px 12px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ink, flexShrink: 0 }}>戻る</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9 }}>
+          {m.isHost ? (
+            <button onClick={() => setConfirming(true)} style={{ padding: "6px 14px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: "#B3402A" }}>🗑 募集をキャンセル</button>
+          ) : m.joinedByMe ? (
+            <button onClick={onLeave} style={{ padding: "6px 14px", borderRadius: 999, border: `1.5px solid ${T.line}`, background: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", color: T.ink }}>参加を取り消す</button>
+          ) : (
+            <button onClick={onJoin} disabled={full} style={{ padding: "6px 14px", borderRadius: 999, border: "none", background: full ? "#EFF2EF" : T.ball, fontWeight: 900, fontSize: 12, cursor: full ? "default" : "pointer", color: full ? "#8B9B96" : T.ballInk }}>
+            {full ? "満員です" : "🏓 参加する"}
+            </button>
           )}
         </div>
       )}
@@ -830,6 +879,11 @@ export default function PickleIkitai() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [detailPikLimit, setDetailPikLimit] = useState(3);
   const [legalView, setLegalView] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [matchForm, setMatchForm] = useState(null); // 一緒にプレー募集の投稿フォーム（開いてる時オブジェクト）
+  const [matchPicker, setMatchPicker] = useState(false); // 施設を選んで募集作成
+  const [matchPickerQ, setMatchPickerQ] = useState("");
+  const [matchSubmitting, setMatchSubmitting] = useState(false);
   // 認証: 現状はブラウザ内の暫定アカウント。LINEログイン(OAuth)+D1が通ったら差し替える
   const [user, setUser] = useState(() => {
     try {
@@ -856,6 +910,7 @@ export default function PickleIkitai() {
   const refRank = useRef(null);
   const refEvents = useRef(null);
   const refPik = useRef(null);
+  const refMatch = useRef(null);
   const refAdd = useRef(null);
   const refContact = useRef(null);
   const refSearch = useRef(null);
@@ -1033,6 +1088,14 @@ export default function PickleIkitai() {
           });
         }
       })
+      .catch(() => {});
+  }, []);
+
+  // 一緒にプレー募集を共有DB(D1)から取得
+  useEffect(() => {
+    fetch(`${API_BASE}/api/matches`, { headers: authToken() ? { Authorization: `Bearer ${authToken()}` } : {} })
+      .then((r) => r.json())
+      .then((d) => { if (d.items) setMatches(d.items); })
       .catch(() => {});
   }, []);
 
@@ -1246,6 +1309,80 @@ export default function PickleIkitai() {
     setPikForm(null);
     showToast("ナイスピク活⚡");
   };
+
+  // どこからでも呼べる「一緒にプレー」募集作成の入口（要ログイン）
+  const openMatchGlobal = () => {
+    if (!user) { setAuthView("signup"); showToast("募集の作成には登録が必要です"); return; }
+    setMatchPicker(true);
+  };
+  const openMatchForm = (fac) => {
+    setMatchForm({
+      facilityId: fac?.id || null, facilityName: fac?.name || "",
+      playDate: todayISO(), timeBand: BANDS[6].label, level: "any", capacity: 4, note: "",
+    });
+  };
+  const submitMatch = async () => {
+    const mf = matchForm;
+    if (!mf) return;
+    const facilityName = sanitizeText(mf.facilityName);
+    if (!facilityName || !mf.playDate || !mf.timeBand) { showToast("場所・日付・時間帯を入力してください"); return; }
+    const note = sanitizeText(mf.note);
+    if (note && hasNG(note)) { showToast("メモに電話番号・URLは含められません"); return; }
+    const token = authToken();
+    if (!token) { showToast("ログインが必要です"); return; }
+    setMatchSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/matches`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ facilityId: mf.facilityId, facilityName, playDate: mf.playDate, timeBand: mf.timeBand, level: mf.level, capacity: mf.capacity, note }),
+      });
+      const d = await res.json();
+      if (!res.ok) { showToast(d.error || "作成に失敗しました"); setMatchSubmitting(false); return; }
+      setMatches((list) => [d.item, ...list]);
+      setMatchForm(null);
+      showToast("募集を作成しました🏓");
+    } catch { showToast("通信に失敗しました。時間をおいて再度お試しください"); }
+    setMatchSubmitting(false);
+  };
+  const joinMatch = (id) => {
+    const token = authToken();
+    if (!token) { setAuthView("signup"); showToast("参加には登録が必要です"); return; }
+    fetch(`${API_BASE}/api/matches/${id}/join`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then(async (res) => {
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(d.error || "参加に失敗しました"); return; }
+        setMatches((list) => list.map((m) => (m.id === id ? { ...m, joined: d.joined, joinedByMe: true } : m)));
+        showToast("参加しました🏓 当日楽しんで！");
+      })
+      .catch(() => showToast("通信に失敗しました。時間をおいて再度お試しください"));
+  };
+  const leaveMatch = (id) => {
+    const token = authToken();
+    fetch(`${API_BASE}/api/matches/${id}/leave`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then(async (res) => {
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(d.error || "取り消しに失敗しました"); return; }
+        setMatches((list) => list.map((m) => (m.id === id ? { ...m, joined: d.joined, joinedByMe: false } : m)));
+        showToast("参加を取り消しました");
+      })
+      .catch(() => showToast("通信に失敗しました。時間をおいて再度お試しください"));
+  };
+  const cancelMatch = (id) => {
+    const token = authToken();
+    fetch(`${API_BASE}/api/matches/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      .then(async (res) => {
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(d.error || "キャンセルに失敗しました"); return; }
+        setMatches((list) => list.filter((m) => m.id !== id));
+        showToast("募集をキャンセルしました");
+      })
+      .catch(() => showToast("通信に失敗しました。時間をおいて再度お試しください"));
+  };
+  const upcomingMatches = useMemo(
+    () => [...matches].sort((a, b) => (a.playDate + a.timeBand).localeCompare(b.playDate + b.timeBand)),
+    [matches]
+  );
 
   // コート名・エリア・メモ・プラン名を横断検索（部分一致・大文字小文字/全角半角を無視）
   const normalize = (s = "") =>
@@ -1544,6 +1681,7 @@ export default function PickleIkitai() {
           <a href="/articles/">記事</a>
           <a onClick={() => scrollTo(refEvents)}>イベント</a>
           <a onClick={() => scrollTo(refPik)}>ピク活</a>
+          <a onClick={() => scrollTo(refMatch)}>マッチング</a>
           <a onClick={() => scrollTo(refAdd)}>コート登録</a>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -1948,6 +2086,44 @@ export default function PickleIkitai() {
           </div>
           <div style={{ textAlign: "center", fontSize: 11, color: "#AEBCB7", marginTop: 16 }}>
             最新{timeline.length}件を表示 ・ 各コートの詳細からもっと見られます
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== 一緒にプレー募集（マッチング） ==================== */}
+      <section ref={refMatch} className="section" style={{ background: T.bg }}>
+        <div className="sectionInner">
+          <SectionHead kicker="MATCHING" title="一緒にプレー募集" />
+          <p style={{ textAlign: "center", fontSize: 13, color: "#5E716C", marginTop: 6, lineHeight: 1.8 }}>
+            🏓 「いつ・どこで・何人」募集するだけ。見た人がそのまま参加表明できます。<br className="hideMobile" />
+            ひとりでも、相手がいなくても、ここで仲間が見つかる。
+          </p>
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <button
+              onClick={openMatchGlobal}
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "13px 26px", borderRadius: 999, border: "none", background: T.ball, color: T.ballInk, fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: FONT, boxShadow: "0 4px 14px rgba(215,244,56,0.5)" }}>
+              🏓 募集する
+            </button>
+            {!user && <div style={{ fontSize: 11, color: "#8B9B96", marginTop: 8 }}>募集の作成・参加には無料の新規登録が必要です</div>}
+          </div>
+          <div style={{ maxWidth: 560, margin: "18px auto 0" }}>
+            {upcomingMatches.length === 0 && (
+              <p style={{ textAlign: "center", fontSize: 13, color: "#8B9B96" }}>まだ募集はありません。最初の募集を出してみましょう</p>
+            )}
+            {upcomingMatches.map((m) => {
+              const f = facById(m.facilityId);
+              return (
+                <MatchCard
+                  key={m.id}
+                  m={m}
+                  facName={f ? f.name : ""}
+                  onFac={f ? () => openDetail(f) : null}
+                  onJoin={() => joinMatch(m.id)}
+                  onLeave={() => leaveMatch(m.id)}
+                  onCancel={() => cancelMatch(m.id)}
+                />
+              );
+            })}
           </div>
         </div>
       </section>
@@ -2521,6 +2697,89 @@ export default function PickleIkitai() {
 
             <button style={{ ...S.btn(true), marginTop: 18, background: T.ball, color: T.ballInk }} onClick={submitPik}>{pikForm.editingId ? "✏️ 更新する" : "⚡ この内容で投稿する"}</button>
             <button style={S.btn(false)} onClick={() => setPikForm(null)}>キャンセル</button>
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: 募集の施設を選ぶ ==================== */}
+      {matchPicker && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 55 }} onClick={() => { setMatchPicker(false); setMatchPickerQ(""); }} />
+          <div style={{ ...S.sheet, zIndex: 65 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
+            <div style={{ fontWeight: 900, fontSize: 17 }}>🏓 どこで募集する？</div>
+            <div style={{ fontSize: 12, color: "#8B9B96", marginTop: 3 }}>コートを選ぶか、下の「リストにない場所で募集」から自由入力できます</div>
+            <input
+              autoFocus
+              style={{ ...S.input, marginTop: 12 }}
+              placeholder="コート名・エリアで絞り込む"
+              value={matchPickerQ}
+              onChange={(e) => setMatchPickerQ(e.target.value)}
+            />
+            <div style={{ marginTop: 10 }}>
+              {ALL_FACS
+                .filter((f) => !f.upcoming)
+                .filter((f) => { const q = matchPickerQ.trim(); return !q || (f.name + f.area).includes(q); })
+                .slice(0, 30)
+                .map((f) => (
+                  <button key={f.id} onClick={() => { setMatchPicker(false); setMatchPickerQ(""); openMatchForm(f); }}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 12px", marginTop: 6, borderRadius: 12, border: `1.5px solid ${T.line}`, background: "#fff", cursor: "pointer", fontFamily: FONT }}>
+                    <div style={{ width: 44, height: 34, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                      <CourtImage fac={f} height={34} rounded={8} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                      <div style={{ fontSize: 11, color: "#8B9B96" }}>{f.area} ・ {f.indoor ? "屋内" : "屋外"}</div>
+                    </div>
+                  </button>
+                ))}
+            </div>
+            <button style={{ ...S.btn(false), marginTop: 12 }} onClick={() => { setMatchPicker(false); setMatchPickerQ(""); openMatchForm(null); }}>リストにない場所で募集</button>
+            <button style={S.btn(false)} onClick={() => { setMatchPicker(false); setMatchPickerQ(""); }}>キャンセル</button>
+          </div>
+        </>
+      )}
+
+      {/* ==================== オーバーレイ: 一緒にプレー募集フォーム ==================== */}
+      {matchForm && (
+        <>
+          <div style={{ ...S.sheetBack, zIndex: 60 }} onClick={() => setMatchForm(null)} />
+          <div style={{ ...S.sheet, zIndex: 70 }}>
+            <div style={{ width: 40, height: 4, background: T.line, borderRadius: 2, margin: "0 auto 12px" }} />
+            <div style={{ fontWeight: 900, fontSize: 17 }}>🏓 一緒にプレー募集を作成</div>
+
+            <label style={{ ...S.label, marginTop: 12 }}>場所 *</label>
+            <input style={S.input} placeholder="例: 渋谷区の公民館 / 世田谷総合運動場" value={matchForm.facilityName} onChange={(e) => setMatchForm({ ...matchForm, facilityName: e.target.value })} />
+
+            <label style={S.label}>日付 *</label>
+            <input type="date" min={todayISO()} style={S.input} value={matchForm.playDate} onChange={(e) => setMatchForm({ ...matchForm, playDate: e.target.value })} />
+
+            <label style={S.label}>時間帯 *</label>
+            <div className="chipScroll" style={{ marginTop: 6, flexWrap: "wrap" }}>
+              {BANDS.map((b) => (
+                <button key={b.key} style={{ ...S.chip(matchForm.timeBand === b.label), fontSize: 12, padding: "6px 11px" }} onClick={() => setMatchForm({ ...matchForm, timeBand: b.label })}>{b.label}時</button>
+              ))}
+            </div>
+
+            <label style={S.label}>レベル</label>
+            <div style={S.segRow}>
+              {Object.entries(LEVEL).map(([k, v]) => (
+                <button key={k} style={S.seg(matchForm.level === k)} onClick={() => setMatchForm({ ...matchForm, level: k })}>{v.label}</button>
+              ))}
+            </div>
+
+            <label style={S.label}>募集人数（自分を含む）</label>
+            <div style={S.segRow}>
+              {[2, 4, 6, 8].map((n) => (
+                <button key={n} style={S.seg(matchForm.capacity === n)} onClick={() => setMatchForm({ ...matchForm, capacity: n })}>{n}人</button>
+              ))}
+            </div>
+
+            <label style={S.label}>ひとこと（任意・140字）</label>
+            <textarea style={{ ...S.input, minHeight: 74, resize: "vertical" }} maxLength={140} placeholder="例: 初中級歓迎！ラケットお持ちでなくてもOK" value={matchForm.note} onChange={(e) => setMatchForm({ ...matchForm, note: e.target.value })} />
+
+            <button style={{ ...S.btn(true), marginTop: 18, background: T.ball, color: T.ballInk }} disabled={matchSubmitting} onClick={submitMatch}>{matchSubmitting ? "作成中…" : "🏓 この内容で募集する"}</button>
+            <button style={S.btn(false)} onClick={() => setMatchForm(null)}>キャンセル</button>
           </div>
         </>
       )}
